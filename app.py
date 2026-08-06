@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import io
 import time
-import streamlit.components.v1 as components
 
 # 1. إعدادات الصفحة
 st.set_page_config(
@@ -12,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم النيون المتقدم وتنسيق كافة العناصر
+# 2. تصميم النيون المتقدم وتنسيق الأنيميشن الـ 3D
 st.markdown("""
     <style>
     /* خلفية التطبيق الداكنة */
@@ -80,6 +79,85 @@ st.markdown("""
         box-shadow: 0 0 10px rgba(0, 242, 254, 0.4) !important;
     }
 
+    /* أنيميشن نيون 3D كود وسيرفر متفاعل ومدمج بدون روابط خارجية */
+    .cyber-loader-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-top: 30px;
+        margin-bottom: 30px;
+    }
+
+    .cyber-spinner {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cyber-ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 4px solid transparent;
+        border-top-color: #00f2fe;
+        animation: spin3d 2s linear infinite;
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
+    }
+
+    .cyber-ring-2 {
+        position: absolute;
+        width: 80%;
+        height: 80%;
+        border-radius: 50%;
+        border: 4px solid transparent;
+        border-bottom-color: #ff007f;
+        animation: spin3d-reverse 1.5s linear infinite;
+        box-shadow: 0 0 15px rgba(255, 0, 127, 0.5);
+    }
+
+    .cyber-core {
+        width: 45px;
+        height: 45px;
+        background: #0f172a;
+        border: 2px solid #38bdf8;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        box-shadow: 0 0 20px #00f2fe;
+        animation: pulseCore 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes spin3d {
+        0% { transform: rotateX(45deg) rotateY(0deg) rotateZ(0deg); }
+        100% { transform: rotateX(45deg) rotateY(360deg) rotateZ(360deg); }
+    }
+
+    @keyframes spin3d-reverse {
+        0% { transform: rotateX(45deg) rotateY(360deg) rotateZ(0deg); }
+        100% { transform: rotateX(45deg) rotateY(0deg) rotateZ(-360deg); }
+    }
+
+    @keyframes pulseCore {
+        0% { transform: scale(0.9); box-shadow: 0 0 10px #00f2fe; }
+        100% { transform: scale(1.1); box-shadow: 0 0 25px #ff007f; }
+    }
+
+    .cyber-text {
+        color: #38bdf8;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        margin-top: 20px;
+        text-align: center;
+    }
+
     /* كروت المقاييس النيون */
     div[data-testid="stMetric"] {
         background: #0f172a !important;
@@ -131,25 +209,18 @@ st.markdown("<div class='sub-title'>المحرك الذكي لتحليل وتط�
 # 4. رفع الملف
 uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# 5. عرض الأنيميشن الـ 3D التفاعلي عند الانتظار (قبل رفع الملف)
+# 5. عرض الشاشة الافتتاحية المتحركة 3D
 if uploaded_file is None:
-    lottie_html = """
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px;">
-        <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
-        <dotlottie-player 
-            src="https://lottie.host/80beee9e-3d1b-4d43-9bc0-043f05d5db32/XwH8GqLwA6.json" 
-            background="transparent" 
-            speed="1" 
-            style="width: 280px; height: 280px; filter: drop-shadow(0 0 15px rgba(0, 242, 254, 0.4));" 
-            loop 
-            autoplay>
-        </dotlottie-player>
-        <p style="color: #38bdf8; font-family: sans-serif; font-size: 0.95rem; font-weight: 600; text-shadow: 0 0 10px rgba(56, 189, 248, 0.4); margin-top: 10px;">
-            ⚡ النظام بانتظار رفع شيت الإكسيل للبدء في المعالجة...
-        </p>
-    </div>
-    """
-    components.html(lottie_html, height=350)
+    st.markdown("""
+        <div class="cyber-loader-container">
+            <div class="cyber-spinner">
+                <div class="cyber-ring"></div>
+                <div class="cyber-ring-2"></div>
+                <div class="cyber-core">💻</div>
+            </div>
+            <div class="cyber-text">⚡ النظام بانتظار رفع شيت الإكسيل للبدء في المعالجة...</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 # 6. معالجة البيانات وأنيميشن التحميل عند رفع الملف
 else:
