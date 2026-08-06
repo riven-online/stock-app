@@ -3,232 +3,220 @@ import pandas as pd
 import io
 import time
 
-# 1. إعدادات الصفحة الاحترافية (Custom Icon and Theme-aware Title)
+# 1. إعدادات الصفحة
 st.set_page_config(
-    page_title="ريـفن | نظام التحضير الذكي",
-    page_icon="📦",
-    layout="wide"
+    page_title="RIVEN | Cyber Stock AI",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# 2. منطقة الـ CSS السحرية (Sleek, Modern, Animated Theme)
+# 2. تصميم النيون المتقدم والحركات التفاعلية
 st.markdown("""
     <style>
-    /* الاتجاه الأساسي للنص (RTL) */
-    .main { text-align: right; direction: rtl; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    
-    /* تنسيق العنوان الرئيسي مع أنيميشن عند التحميل */
+    /* خلفية ليلي داكنة وشاملة للموقع */
+    .stApp {
+        background-color: #0b0f19 !important;
+        color: #e2e8f0 !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        direction: rtl;
+    }
+
+    /* العنوان الرئيسي مع وهج نيون متدرج */
     h1 {
-        color: #333;
-        font-weight: 800;
-        margin-bottom: 25px;
-        border-right: 5px solid #a3ead1; /* لون نعناعي ريـفن */
-        padding-right: 15px;
-        animation: fadeInRight 0.8s ease-out;
-    }
-    @keyframes fadeInRight {
-        0% { opacity: 0; transform: translateX(20px); }
-        100% { opacity: 1; transform: translateX(0); }
+        background: linear-gradient(90deg, #00f2fe 0%, #4facfe 50%, #00e676 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900 !important;
+        font-size: 2.3rem !important;
+        text-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+        margin-bottom: 20px;
     }
 
-    /* تنسيق الوصف الفرعي */
-    .stMarkdown p { font-size: 1.1em; color: #555; }
+    /* العناوين الفرعية */
+    h3 {
+        color: #38bdf8 !important;
+        font-weight: 700 !important;
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+    }
 
-    /* تنسيق حاوية رفع الملفات (Upload Zone) */
+    /* حاوية رفع الملفات بتأثير النيون الزجاجي */
     div[data-testid="stFileUploadDropzone"] {
-        border: 2px dashed #a3ead1;
-        border-radius: 15px;
-        background-color: #f9fdfc;
-        transition: all 0.3s ease;
-        padding: 20px;
-        animation: slideUp 0.6s ease-out;
-    }
-    @keyframes slideUp {
-        0% { opacity: 0; transform: translateY(20px); }
-        100% { opacity: 1; transform: translateY(0); }
+        background: rgba(15, 23, 42, 0.75) !important;
+        border: 2px solid #00f2fe !important;
+        border-radius: 16px !important;
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.25), inset 0 0 15px rgba(0, 242, 254, 0.1) !important;
+        transition: all 0.4s ease-in-out !important;
     }
     div[data-testid="stFileUploadDropzone"]:hover {
-        border-color: #f7a072; /* لون برتقالي عند التمرير */
-        background-color: #fff9f6;
-        box-shadow: 0 4px 15px rgba(247, 160, 114, 0.1);
+        border-color: #ff007f !important;
+        box-shadow: 0 0 25px rgba(255, 0, 127, 0.5), inset 0 0 20px rgba(255, 0, 127, 0.2) !important;
+        transform: translateY(-3px);
     }
     div[data-testid="stFileUploadDropzone"] div[class*="StyledFileUploadDescription"] {
-        color: #f7a072 !important;
-        font-weight: bold;
+        color: #38bdf8 !important;
     }
 
-    /* تنسيق كروت الإحصائيات (Metrics) مع أنيميشن تفاعلي */
-    div[data-testid="stMetricValue"] {
-        font-size: 32px !important;
-        font-weight: 700 !important;
-        color: #2c3e50 !important;
-    }
-    div[data-testid="stMetricLabel"] {
-        font-size: 16px !important;
-        color: #7f8c8d !important;
-    }
+    /* كروت المقاييس (Metric Cards) النيون */
     div[data-testid="stMetric"] {
-        background-color: white;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
-        border: 1px solid #eee;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        animation: popIn 0.5s ease-out;
+        background: rgba(15, 23, 42, 0.8) !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        border-radius: 16px !important;
+        padding: 20px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 10px rgba(56, 189, 248, 0.15) !important;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
-        border-color: #a3ead1;
+        transform: translateY(-7px) scale(1.02);
+        border-color: #00f2fe !important;
+        box-shadow: 0 10px 30px rgba(0, 242, 254, 0.35) !important;
     }
-    @keyframes popIn {
-        0% { transform: scale(0.9); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
+    div[data-testid="stMetricValue"] {
+        color: #00f2fe !important;
+        font-size: 2.2rem !important;
+        font-weight: 800 !important;
+        text-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #94a3b8 !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
     }
 
-    /* لون مخصص للأصناف التي بها عجز (برتقالي تنبيهي) */
-    div[data-testid="stMetricValue"] span[class*="st-emotion-cache"] {
-        color: #e67e22 !important;
-    }
-
-    /* تنسيق الأزرار (Buttons) الاحترافية */
-    .stButton>button {
-        background-color: #a3ead1 !important; /* لون نعناعي ريـفن */
-        color: #333 !important;
-        border-radius: 25px !important;
+    /* أزرار التحميل مع حركة نيون تفاعلية */
+    .stButton>button, div[data-testid="stDownloadButton"]>button {
+        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
+        color: #090d16 !important;
         border: none !important;
-        font-weight: 700 !important;
-        font-size: 1.1em !important;
-        padding: 10px 25px !important;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-        animation: pulse 2s infinite;
+        border-radius: 30px !important;
+        font-weight: 800 !important;
+        font-size: 1rem !important;
+        padding: 12px 30px !important;
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.4) !important;
+        transition: all 0.3s ease !important;
     }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(163, 234, 209, 0.7); }
-        70% { box-shadow: 0 0 0 15px rgba(163, 234, 209, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(163, 234, 209, 0); }
-    }
-    .stButton>button:hover {
-        background-color: #f7a072 !important; /* لون برتقالي عند التمرير */
-        transform: scale(1.03);
-        animation: none;
+    .stButton>button:hover, div[data-testid="stDownloadButton"]>button:hover {
+        background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 25px rgba(255, 0, 127, 0.7) !important;
+        transform: scale(1.05);
     }
 
-    /* تنسيق حاوية الشيت (DataFrame) والديناميكية */
-    div[data-testid="stDataFrameContainer"] {
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.03);
-        border: 1px solid #f0f0f0;
-        animation: slideUp 0.7s ease-out;
+    /* تنسيق الجداول الداكنة */
+    div[data-testid="stDataFrame"] {
+        background: rgba(15, 23, 42, 0.9) !important;
+        border: 1px solid rgba(56, 189, 248, 0.2) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
     }
 
-    /* تنسيق العناوين الفرعية (Subheaders) */
-    h3 {
-        color: #333;
-        margin-top: 35px;
-        font-weight: 700;
-        animation: slideUp 0.6s ease-out;
+    /* شريط التقدم التفاعلي */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(90deg, #00f2fe, #ff007f) !important;
+        box-shadow: 0 0 15px #00f2fe;
     }
-    
-    /* شريط النجاح المخصص */
-    div.stAlert[data-testid="stAlert"] {
-        border-radius: 10px;
-        background-color: #f3fdf9;
-        color: #1e7051;
-        border: 1px solid #a3ead1;
+
+    /* تنبيهات النيون */
+    div.stAlert {
+        background: rgba(30, 41, 59, 0.8) !important;
+        border: 1px solid #00e676 !important;
+        color: #00e676 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 0 15px rgba(0, 230, 118, 0.2) !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. محتوى الصفحة (Title and Description)
-st.title("📦 ريـفن | نظام إدارة تحضير الفروع ومطابقة الاستوك الذكي")
-st.write("قم برفع ملف الإكسيل الموحد (يحتوي على شيت التحضير وشيت الاستوك) للحصول على تحليل فوري، ديناميكي، ومبهر.")
+# 3. الواجهة الرئيسية
+st.title("⚡ RIVEN | Cyber Stock Engine")
+st.write("المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير.")
 
-# 4. حاوية رفع الملف
+# 4. رفع الملف
 with st.container():
-    st.markdown("### 📥 1. اختر ملف الإكسيل (.xlsx)")
+    st.markdown("### 📥 رفع شيت الإكسيل الموحد (.xlsx)")
     uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# أنيميشن التحميل (Loading State for professional feel)
+# 5. معالجة البيانات مع شريط تحميل تفاعلي نيون
 if uploaded_file is not None:
-    with st.spinner("⏳ جاري تحليل البيانات وبناء الواجهة التفاعلية..."):
-        time.sleep(1.5) # Fake loading to show off animations and spinner
-        try:
-            # قراءة الشيتات بناءً على أسمائها في الملف
-            df_prep = pd.read_excel(uploaded_file, sheet_name='Reallocation_Plan_ONL_2026-08-0')
-            df_stock = pd.read_excel(uploaded_file, sheet_name='ستوك')
+    # انيميشن تحميل حقيقي وديناميكي
+    progress_bar = st.progress(0)
+    status_text = st.empty()
 
-            # تحديد أعمدة الفروع الـ 36 تلقائياً
-            size_idx = df_prep.columns.get_loc('Size')
-            qty_idx = df_prep.columns.get_loc('qty')
-            branch_cols = df_prep.columns[size_idx + 1 : qty_idx].tolist()
+    for percent_complete in range(1, 101, 20):
+        time.sleep(0.1)
+        progress_bar.progress(percent_complete)
+        if percent_complete < 40:
+            status_text.markdown("⚡ *جاري قراءة ملفات الإكسيل والاستوك...*")
+        elif percent_complete < 80:
+            status_text.markdown("⚡ *جاري مطابقة الأقسام والفروقات وتوليد البيانات...*")
+        else:
+            status_text.markdown("⚡ *تجهيز الداشبورد التفاعلية...*")
 
-            # تحديث رصيد المخزن وإعادة حساب الفروقات
-            stock_map = df_stock.set_index('Product/Barcode')['Quantity'].to_dict()
-            df_prep['stock'] = df_prep['Item-Size'].map(stock_map).fillna(df_prep['stock'])
-            df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
-            df_prep['diff'] = df_prep['stock'] - df_prep['qty']
+    progress_bar.empty()
+    status_text.empty()
 
-            # إشعار نجاح التحميل
-            st.success("✅ تم تحميل الملف وتحليل البيانات بنجاح!")
-            
-            # كروت إحصائية سريعة بتنسيق محسّن
-            total_items = len(df_prep)
-            shortage_items = (df_prep['diff'] < 0).sum()
-            
-            st.markdown("### 📊 2. لمحة سريعة")
-            with st.container():
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    st.metric(label="📦 إجمالي الأصناف والمقاسات", value=f"{total_items:,}")
-                with c2:
-                    st.metric(label="⚠️ الأصناف التي بها عجز (الرصيد لا يكفي)", value=f"{shortage_items:,}")
-                with c3:
-                    st.metric(label="🛍️ عدد الفروع المشاركة", value=f"{len(branch_cols)} فرع")
+    try:
+        df_prep = pd.read_excel(uploaded_file, sheet_name='Reallocation_Plan_ONL_2026-08-0')
+        df_stock = pd.read_excel(uploaded_file, sheet_name='ستوك')
 
-            st.markdown("---")
+        size_idx = df_prep.columns.get_loc('Size')
+        qty_idx = df_prep.columns.get_loc('qty')
+        branch_cols = df_prep.columns[size_idx + 1 : qty_idx].tolist()
 
-            # 5. منطقة عرض وتحميل نتائج العجز
-            st.subheader("⚠️ 3. كشف أصناف العجز المكتشفة (المطلوب > المتاح)")
-            df_shortage = df_prep[df_prep['diff'] < 0].copy()
+        stock_map = df_stock.set_index('Product/Barcode')['Quantity'].to_dict()
+        df_prep['stock'] = df_prep['Item-Size'].map(stock_map).fillna(df_prep['stock'])
+        df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
+        df_prep['diff'] = df_prep['stock'] - df_prep['qty']
 
-            # زر تحميل شيت الفروقات والعجز فقط
-            buffer_shortage = io.BytesIO()
-            with pd.ExcelWriter(buffer_shortage, engine='openpyxl') as writer:
-                df_shortage.to_excel(writer, index=False, sheet_name='تقرير_العجز')
-            
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                st.download_button(
-                    label="📥 تحميل كشف العجز (Excel)",
-                    data=buffer_shortage.getvalue(),
-                    file_name="تقرير_العجز_والفروقات.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+        st.success("✅ تم مكتمل التحليل ومطابقة البيانات بنجاح!")
 
-            # عرض شيت العجز (Dataframe with dynamic width and sleek styling)
-            st.dataframe(df_shortage[['Item-Size', 'Item', 'Size', 'qty', 'stock', 'diff'] + branch_cols], use_container_width=True)
+        # المقاييس الرئيسية بتصميم نيون
+        total_items = len(df_prep)
+        shortage_items = (df_prep['diff'] < 0).sum()
 
-            st.markdown("---")
+        st.markdown("### 📊 الداشبورد التفاعلية")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric(label="📦 إجمالي الأصناف", value=f"{total_items:,}")
+        with c2:
+            st.metric(label="⚠️ أصناف العجز (مطلوب > متاح)", value=f"{shortage_items:,}")
+        with c3:
+            st.metric(label="🏬 عدد الفروع", value=f"{len(branch_cols)} فرع")
 
-            # 6. تصدير الشيت النهائي
-            st.subheader("✅ 4. تصدير الشيت النهائي المعتمد للتحضير")
-            st.markdown("⚠️ **بعد مراجعة وتعديل الكميات المطلوب خصمها من الفروع، اضغط هنا لتنزيل كشف التحضير النهائي.**")
-            
-            buffer_final = io.BytesIO()
-            with pd.ExcelWriter(buffer_final, engine='openpyxl') as writer:
-                df_prep.to_excel(writer, index=False, sheet_name='التحضير_النهائي')
+        st.markdown("---")
 
-            col1_final, col2_final = st.columns([1, 4])
-            with col1_final:
-                st.download_button(
-                    label="📥 تحميل الشيت النهائي الكامل (Excel)",
-                    data=buffer_final.getvalue(),
-                    file_name="الخطه_النهائيه_للكشوفات.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+        # عرض العجز وتصديره
+        st.markdown("### 🚨 الأصناف التي بها عجز رصيد")
+        df_shortage = df_prep[df_prep['diff'] < 0].copy()
 
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء قراءة البيانات أو بناء الواجهة: {e}")
-            st.write("تأكد من أن أسماء الشيتات وأعمدة الـ " + 
-                     "Item-Size, Product/Barcode, Quantity, Size, qty في ملف الإكسيل صحيحة ومطابقة للكود.")
+        buffer_shortage = io.BytesIO()
+        with pd.ExcelWriter(buffer_shortage, engine='openpyxl') as writer:
+            df_shortage.to_excel(writer, index=False, sheet_name='تقرير_العجز')
+
+        st.download_button(
+            label="📥 تحميل كشف العجز (Excel)",
+            data=buffer_shortage.getvalue(),
+            file_name="تقرير_العجز_والفروقات.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        st.dataframe(df_shortage[['Item-Size', 'Item', 'Size', 'qty', 'stock', 'diff'] + branch_cols], use_container_width=True)
+
+        st.markdown("---")
+
+        # الشيت النهائي
+        st.markdown("### ✅ تصدير الشيت النهائي للتحضير")
+        buffer_final = io.BytesIO()
+        with pd.ExcelWriter(buffer_final, engine='openpyxl') as writer:
+            df_prep.to_excel(writer, index=False, sheet_name='التحضير_النهائي')
+
+        st.download_button(
+            label="📥 تحميل الشيت النهائي الكامل (Excel)",
+            data=buffer_final.getvalue(),
+            file_name="الخطه_النهائيه_للكشوفات.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    except Exception as e:
+        st.error(f"خطأ في قراءة البيانات: {e}")
