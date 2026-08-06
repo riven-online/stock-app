@@ -11,10 +11,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم النيون المتقدم وتعديل صندوق الرفع
+# 2. تصميم النيون المتقدم وتعديل مستطيل الرفع لإلغاء اللون الأبيض
 st.markdown("""
     <style>
-    /* خلفية ليلي داكنة وشاملة */
+    /* خلفية ليلي داكنة وشاملة للموقع */
     .stApp {
         background-color: #0b0f19 !important;
         color: #e2e8f0 !important;
@@ -40,30 +40,20 @@ st.markdown("""
         text-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
     }
 
-    /* تعديل حاوية رفع الملفات لتلائم الثيم الداكن تماماً */
+    /* تحويل مستطيل الرفع بالكامل للون الداكن والنيون (إلغاء الأبيض تماماً) */
     div[data-testid="stFileUploadDropzone"] {
-        background: rgba(15, 23, 42, 0.85) !important;
+        background-color: #111827 !important;
         border: 2px dashed #00f2fe !important;
-        border-radius: 20px !important;
-        box-shadow: 0 0 20px rgba(0, 242, 254, 0.2), inset 0 0 15px rgba(0, 242, 254, 0.1) !important;
-        transition: all 0.4s ease-in-out !important;
-        color: #e2e8f0 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.25) !important;
+        transition: all 0.3s ease-in-out !important;
     }
     div[data-testid="stFileUploadDropzone"]:hover {
         border-color: #ff007f !important;
-        box-shadow: 0 0 30px rgba(255, 0, 127, 0.6), inset 0 0 20px rgba(255, 0, 127, 0.2) !important;
-        transform: translateY(-4px);
+        box-shadow: 0 0 25px rgba(255, 0, 127, 0.5) !important;
     }
-    div[data-testid="stFileUploadDropzone"] button {
-        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
-        color: #090d16 !important;
-        border: none !important;
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        box-shadow: 0 0 10px rgba(0, 242, 254, 0.4) !important;
-    }
-    div[data-testid="stFileUploadDropzone"] small {
-        color: #94a3b8 !important;
+    div[data-testid="stFileUploadDropzone"] * {
+        color: #38bdf8 !important;
     }
 
     /* كروت المقاييس النيون */
@@ -112,12 +102,6 @@ st.markdown("""
         transform: scale(1.05);
     }
 
-    /* شريط التقدم النيون */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #00f2fe, #ff007f) !important;
-        box-shadow: 0 0 15px #00f2fe;
-    }
-
     /* جداول داكنة */
     div[data-testid="stDataFrame"] {
         background: rgba(15, 23, 42, 0.9) !important;
@@ -140,7 +124,7 @@ st.markdown("""
 st.title("⚡ RIVEN | Cyber Stock Engine")
 st.write("المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير.")
 
-# 4. منطقة رفع الملف
+# 4. رفع الملف
 with st.container():
     st.markdown("### 📥 رفع شيت الإكسيل الموحد (.xlsx)")
     uploaded_file = st.file_uploader("", type=["xlsx"])
@@ -154,8 +138,6 @@ if uploaded_file is not None:
     for step in range(1, 101):
         time.sleep(0.02)
         progress_bar.progress(step)
-        
-        # تغيير الأيقونة تلقائياً مع كل زيادة في نسبة التحميل
         current_icon = fashion_icons[(step // 15) % len(fashion_icons)]
         
         if step < 40:
