@@ -11,10 +11,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم النيون المتقدم وإجبار تعديل صندوق الرفع والخطوط
+# 2. إجبار تلوين كافة طبقات المستطيل للون الداكن والنيون
 st.markdown("""
     <style>
-    /* خلفية ليلي داكنة وشاملة */
+    /* خلفية التطبيق */
     .stApp {
         background-color: #080b11 !important;
         color: #e2e8f0 !important;
@@ -28,7 +28,7 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800 !important;
-        font-size: 2.2rem !important;
+        font-size: 2.1rem !important;
         text-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
         margin-bottom: 5px !important;
         text-align: center;
@@ -37,44 +37,49 @@ st.markdown("""
     /* الوصف الفرعي */
     .sub-title {
         color: #94a3b8;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         text-align: center;
         margin-bottom: 25px;
     }
 
-    /* إجبار مستطيل الرفع بالكامل على الثيم الداكن والنيون */
-    div[data-testid="stFileUploader"], 
-    div[data-testid="stFileUploadDropzone"],
-    section[data-testid="stFileUploadDropzone"] {
+    /* استهداف وإلغاء خلفية جميع عناصر مستطيل الرفع الداخلية */
+    div[data-testid="stFileUploader"],
+    div[data-testid="stFileUploader"] *,
+    div[data-testid="stFileUploaderDropzone"],
+    div[data-testid="stFileUploaderDropzone"] *,
+    section[data-testid="stFileUploaderDropzone"],
+    section[data-testid="stFileUploaderDropzone"] * {
         background-color: #0f172a !important;
-        border: 1px dashed #00f2fe !important;
+        background: #0f172a !important;
+        color: #00f2fe !important;
+    }
+
+    /* ضبط حدود المستطيل وتوهج النيون */
+    div[data-testid="stFileUploaderDropzone"],
+    section[data-testid="stFileUploaderDropzone"] {
+        border: 2px dashed #00f2fe !important;
         border-radius: 16px !important;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.15) !important;
-        transition: all 0.3s ease !important;
+        box-shadow: 0 0 18px rgba(0, 242, 254, 0.25) !important;
+        transition: all 0.3s ease-in-out !important;
         padding: 20px !important;
     }
 
-    div[data-testid="stFileUploadDropzone"]:hover {
+    /* التفاعلية عند تحريك الماوس/اللمس */
+    div[data-testid="stFileUploaderDropzone"]:hover,
+    section[data-testid="stFileUploaderDropzone"]:hover {
         border-color: #ff007f !important;
-        box-shadow: 0 0 20px rgba(255, 0, 127, 0.4) !important;
+        box-shadow: 0 0 25px rgba(255, 0, 127, 0.5) !important;
     }
 
-    /* تحويل نصوص داخل المستطيل للون الفاتح والنيون */
-    div[data-testid="stFileUploadDropzone"] span,
-    div[data-testid="stFileUploadDropzone"] small,
-    div[data-testid="stFileUploadDropzone"] div {
-        color: #38bdf8 !important;
-        font-size: 0.85rem !important;
-    }
-
-    /* تعديل زر الرفع نفسه داخل المستطيل */
-    div[data-testid="stFileUploadDropzone"] button {
+    /* تعديل زر الرفع Upload بالداخل */
+    div[data-testid="stFileUploaderDropzone"] button,
+    section[data-testid="stFileUploaderDropzone"] button {
         background: linear-gradient(135deg, #00f2fe 0%, #00b4d8 100%) !important;
         color: #080b11 !important;
         border: none !important;
         border-radius: 8px !important;
         font-weight: bold !important;
-        box-shadow: 0 0 10px rgba(0, 242, 254, 0.3) !important;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.4) !important;
     }
 
     /* كروت المقاييس النيون */
@@ -121,11 +126,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. الواجهة الرئيسية الهادئة
+# 3. الواجهة الرئيسية
 st.title("⚡ RIVEN | Cyber Stock Engine")
 st.markdown("<div class='sub-title'>المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير</div>", unsafe_allow_html=True)
 
-# 4. رفع الملف بدون عناوين مزعجة
+# 4. رفع الملف
 uploaded_file = st.file_uploader("", type=["xlsx"])
 
 # 5. معالجة البيانات وأنيميشن التحميل الخاص بالملابس
