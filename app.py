@@ -2,44 +2,24 @@ import streamlit as st
 import pandas as pd
 import io
 import time
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # 1. إعدادات الصفحة
 st.set_page_config(
-    page_title="RIVEN | Cyber Stock AI",
+    page_title="Riven",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم CSS متطور للتأثيرات الضوئية والليد والموشن
+# 2. تصميم CSS متطور للتأثيرات الضوئية والليد
 st.markdown("""
     <style>
-    /* خلفية التطبيق الداكنة */
     .stApp {
         background-color: #080b11 !important;
         color: #e2e8f0 !important;
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         direction: rtl;
-    }
-
-    /* العنوان الرئيسي */
-    h1 {
-        background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800 !important;
-        font-size: 2.1rem !important;
-        text-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
-        margin-bottom: 5px !important;
-        text-align: center;
-    }
-
-    /* الوصف الفرعي */
-    .sub-title {
-        color: #94a3b8;
-        font-size: 0.9rem;
-        text-align: center;
-        margin-bottom: 25px;
     }
 
     /* مستطيل الرفع نيون */
@@ -50,7 +30,7 @@ st.markdown("""
         border-radius: 16px !important;
         box-shadow: 0 0 18px rgba(0, 242, 254, 0.25) !important;
         transition: all 0.3s ease-in-out !important;
-        padding: 20px !important;
+        padding: 15px !important;
     }
 
     div[data-testid="stFileUploaderDropzone"] button,
@@ -63,14 +43,15 @@ st.markdown("""
         box-shadow: 0 0 12px rgba(0, 242, 254, 0.5) !important;
     }
 
-    /* بنر RIVEN مع موشن ليد */
+    /* بنر Riven التفاعلي */
     .riven-success-banner {
         background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
         border: 1px solid #00f2fe;
         border-radius: 14px;
-        padding: 16px;
+        padding: 14px;
         text-align: center;
-        margin-bottom: 25px;
+        margin-top: 10px;
+        margin-bottom: 20px;
         box-shadow: 0 0 20px rgba(0, 242, 254, 0.35);
         position: relative;
         overflow: hidden;
@@ -79,7 +60,7 @@ st.markdown("""
 
     .riven-banner-title {
         color: #00f2fe;
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         font-weight: 800;
         letter-spacing: 2px;
         display: flex;
@@ -88,7 +69,7 @@ st.markdown("""
         gap: 12px;
     }
 
-    /* أيقونات الليد المتحركة الصغيرة (بديل الإيموجي) */
+    /* مؤشرات الليد */
     .led-dot {
         width: 10px;
         height: 10px;
@@ -110,79 +91,18 @@ st.markdown("""
         100% { border-color: #38bdf8; box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); }
     }
 
-    /* أنيميشن نيون 3D للتحميل */
-    .cyber-loader-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        margin-top: 30px;
-        margin-bottom: 30px;
-    }
-
-    .cyber-spinner {
-        position: relative;
-        width: 120px;
-        height: 120px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .cyber-ring {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        border: 4px solid transparent;
-        border-top-color: #00f2fe;
-        animation: spin3d 2s linear infinite;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
-    }
-
-    .cyber-ring-2 {
-        position: absolute;
-        width: 80%;
-        height: 80%;
-        border-radius: 50%;
-        border: 4px solid transparent;
-        border-bottom-color: #ff007f;
-        animation: spin3d-reverse 1.5s linear infinite;
-        box-shadow: 0 0 15px rgba(255, 0, 127, 0.5);
-    }
-
-    .cyber-core {
-        width: 45px;
-        height: 45px;
-        background: #0f172a;
-        border: 2px solid #38bdf8;
-        border-radius: 10px;
-        box-shadow: 0 0 20px #00f2fe;
-        animation: pulseCore 1.5s ease-in-out infinite alternate;
-    }
-
-    @keyframes spin3d {
-        0% { transform: rotateX(45deg) rotateY(0deg) rotateZ(0deg); }
-        100% { transform: rotateX(45deg) rotateY(360deg) rotateZ(360deg); }
-    }
-
-    @keyframes spin3d-reverse {
-        0% { transform: rotateX(45deg) rotateY(360deg) rotateZ(0deg); }
-        100% { transform: rotateX(45deg) rotateY(0deg) rotateZ(-360deg); }
-    }
-
-    @keyframes pulseCore {
-        0% { transform: scale(0.9); box-shadow: 0 0 10px #00f2fe; }
-        100% { transform: scale(1.1); box-shadow: 0 0 25px #ff007f; }
-    }
-
-    .cyber-text {
-        color: #38bdf8;
-        font-size: 0.95rem;
-        font-weight: 600;
-        text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    /* عنوان Dashboard بالإنجليزية */
+    .dashboard-header {
+        color: #00f2fe;
+        font-size: 1.6rem;
+        font-weight: 900;
+        letter-spacing: 3px;
         margin-top: 20px;
-        text-align: center;
+        margin-bottom: 15px;
+        text-shadow: 0 0 12px rgba(0, 242, 254, 0.4);
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
     /* تصاميم كروت الإحصائيات */
@@ -199,18 +119,10 @@ st.markdown("""
         border: 1px solid rgba(0, 242, 254, 0.3);
         box-shadow: 0 4px 20px rgba(0, 242, 254, 0.12);
     }
-    .card-normal:hover {
-        box-shadow: 0 0 22px rgba(0, 242, 254, 0.35);
-        border-color: #00f2fe;
-    }
 
     .card-warning {
         border: 1px solid rgba(255, 0, 127, 0.4);
         box-shadow: 0 4px 20px rgba(255, 0, 127, 0.15);
-    }
-    .card-warning:hover {
-        box-shadow: 0 0 25px rgba(255, 0, 127, 0.45);
-        border-color: #ff007f;
     }
 
     .card-title {
@@ -239,80 +151,49 @@ st.markdown("""
 
     .section-title {
         color: #f8fafc;
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         font-weight: 700;
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-top: 15px;
-        margin-bottom: 15px;
+        margin-top: 20px;
+        margin-bottom: 12px;
     }
 
     /* أزرار التحميل */
-    .stButton>button, div[data-testid="stDownloadButton"]>button {
+    div[data-testid="stDownloadButton"]>button {
         background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
         color: #080b11 !important;
         border: none !important;
-        border-radius: 20px !important;
+        border-radius: 12px !important;
         font-weight: bold !important;
         font-size: 0.95rem !important;
-        padding: 10px 24px !important;
+        padding: 8px 20px !important;
         box-shadow: 0 0 12px rgba(0, 242, 254, 0.3) !important;
     }
-    .stButton>button:hover, div[data-testid="stDownloadButton"]>button:hover {
+    div[data-testid="stDownloadButton"]>button:hover {
         background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%) !important;
         color: #ffffff !important;
         box-shadow: 0 0 20px rgba(255, 0, 127, 0.6) !important;
     }
-
-    /* جداول البيانات */
-    div[data-testid="stDataFrame"] {
-        background: #0f172a !important;
-        border: 1px solid rgba(56, 189, 248, 0.15) !important;
-        border-radius: 10px !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. الواجهة الرئيسية
-st.title("RIVEN | Cyber Stock Engine")
-st.markdown("<div class='sub-title'>المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير</div>", unsafe_allow_html=True)
+# 3. كارت Riven العلوي فقط
+st.markdown("""
+    <div class="riven-success-banner">
+        <div class="riven-banner-title">
+            <span class="led-dot led-green"></span>
+            Riven
+            <span class="led-dot led-blue"></span>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 # 4. رفع الملف
 uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# 5. عرض الشاشة الافتتاحية المتحركة 3D
-if uploaded_file is None:
-    st.markdown("""
-        <div class="cyber-loader-container">
-            <div class="cyber-spinner">
-                <div class="cyber-ring"></div>
-                <div class="cyber-ring-2"></div>
-                <div class="cyber-core"></div>
-            </div>
-            <div class="cyber-text">النظام بانتظار رفع شيت الإكسيل للبدء في المعالجة...</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-# 6. معالجة البيانات وأنيميشن التحميل عند رفع الملف
-else:
-    status_text = st.empty()
-    progress_bar = st.progress(0)
-
-    for step in range(1, 101):
-        time.sleep(0.012)
-        progress_bar.progress(step)
-        
-        if step < 40:
-            status_text.markdown("##### <span class='led-dot led-blue'></span> *جاري مطابقة منتجات الاستوك والقطع...*", unsafe_allow_html=True)
-        elif step < 80:
-            status_text.markdown("##### <span class='led-dot led-green'></span> *جاري توزيع الكميات على الفروع وتحديد العجز...*", unsafe_allow_html=True)
-        else:
-            status_text.markdown("##### <span class='led-dot led-red'></span> *تجهيز كروت البيانات والتقرير النهائي...*", unsafe_allow_html=True)
-
-    progress_bar.empty()
-    status_text.empty()
-
+if uploaded_file is not None:
     try:
         df_prep = pd.read_excel(uploaded_file, sheet_name='Reallocation_Plan_ONL_2026-08-0')
         df_stock = pd.read_excel(uploaded_file, sheet_name='ستوك')
@@ -326,22 +207,16 @@ else:
         df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
         df_prep['diff'] = df_prep['stock'] - df_prep['qty']
 
-        # بنر Riven التفاعلي بالليد الموشن
-        st.markdown("""
-            <div class="riven-success-banner">
-                <div class="riven-banner-title">
-                    <span class="led-dot led-green"></span>
-                    Riven
-                    <span class="led-dot led-blue"></span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        # ضبط أنواع البيانات بدقة لمنع تداخل المقاسات مع الأرقام عند التصدير
+        df_prep['Item-Size'] = df_prep['Item-Size'].astype(str)
+        df_prep['Item'] = df_prep['Item'].astype(str)
+        df_prep['Size'] = df_prep['Size'].astype(str)
 
-        # المقاييس الرئيسية
         total_items = len(df_prep)
         shortage_items = (df_prep['diff'] < 0).sum()
 
-        st.markdown("<div class='section-title'><span class='led-dot led-blue'></span> الداشبورد وتحليل البيانات</div>", unsafe_allow_html=True)
+        # DASHBOARD
+        st.markdown("<div class='dashboard-header'><span class='led-dot led-blue'></span> DASHBOARD</div>", unsafe_allow_html=True)
         
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -368,10 +243,14 @@ else:
 
         st.markdown("---")
 
-        # عرض العجز وتصديره
+        # الأصناف التي بها عجز
         st.markdown("<div class='section-title'><span class='led-dot led-red'></span> الأصناف التي بها عجز رصيد</div>", unsafe_allow_html=True)
-        df_shortage = df_prep[df_prep['diff'] < 0].copy()
+        
+        # تصفية وتجهيز ترتيب الأعمدة السليم لملف التصدير
+        export_cols = ['Item-Size', 'Item', 'Size', 'qty', 'stock', 'diff'] + branch_cols
+        df_shortage = df_prep[df_prep['diff'] < 0][export_cols].copy()
 
+        # تصدير منسق وبدون لخبطة في الخلايا
         buffer_shortage = io.BytesIO()
         with pd.ExcelWriter(buffer_shortage, engine='openpyxl') as writer:
             df_shortage.to_excel(writer, index=False, sheet_name='تقرير_العجز')
@@ -383,15 +262,33 @@ else:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-        st.dataframe(df_shortage[['Item-Size', 'Item', 'Size', 'qty', 'stock', 'diff'] + branch_cols], use_container_width=True)
+        # عرض الجدول مع تثبيت الأعمدة حتى هيدر (diff) أثناء التمرير الأفقي
+        gb = GridOptionsBuilder.from_dataframe(df_shortage)
+        gb.configure_default_column(resizable=True, filterable=True, sortable=True)
+        
+        # تثبيت الأعمدة الأساسية على اليمين
+        sticky_cols = ['Item-Size', 'Item', 'Size', 'qty', 'stock', 'diff']
+        for col in sticky_cols:
+            gb.configure_column(col, pinned='right')
+
+        grid_options = gb.build()
+        AgGrid(
+            df_shortage,
+            gridOptions=grid_options,
+            theme='balham-dark',
+            height=400,
+            fit_columns_on_grid_load=False,
+            allow_unsafe_jscode=True
+        )
 
         st.markdown("---")
 
-        # الشيت النهائي
+        # الشيت النهائي للتحضير
         st.markdown("<div class='section-title'><span class='led-dot led-green'></span> الشيت النهائي للتحضير</div>", unsafe_allow_html=True)
+        
         buffer_final = io.BytesIO()
         with pd.ExcelWriter(buffer_final, engine='openpyxl') as writer:
-            df_prep.to_excel(writer, index=False, sheet_name='التحضير_النهائي')
+            df_prep[export_cols].to_excel(writer, index=False, sheet_name='التحضير_النهائي')
 
         st.download_button(
             label="تحميل الشيت النهائي الكامل (Excel)",
@@ -401,4 +298,4 @@ else:
         )
 
     except Exception as e:
-        st.error(f"حدث خطأ في قراءة البيانات: {e}")
+        st.error(f"حدث خطأ أثناء معالجة البيانات: {e}")
