@@ -11,132 +11,131 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم النيون المتقدم وتعديل مستطيل الرفع لإلغاء اللون الأبيض
+# 2. تصميم النيون المتقدم وإجبار تعديل صندوق الرفع والخطوط
 st.markdown("""
     <style>
-    /* خلفية ليلي داكنة وشاملة للموقع */
+    /* خلفية ليلي داكنة وشاملة */
     .stApp {
-        background-color: #0b0f19 !important;
+        background-color: #080b11 !important;
         color: #e2e8f0 !important;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         direction: rtl;
     }
 
-    /* العنوان الرئيسي مع وهج نيون متدرج */
+    /* العنوان الرئيسي */
     h1 {
-        background: linear-gradient(90deg, #00f2fe 0%, #4facfe 50%, #00e676 100%);
+        background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-weight: 900 !important;
-        font-size: 2.3rem !important;
-        text-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
-        margin-bottom: 20px;
+        font-weight: 800 !important;
+        font-size: 2.2rem !important;
+        text-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+        margin-bottom: 5px !important;
+        text-align: center;
     }
 
-    /* العناوين الفرعية */
-    h3 {
-        color: #38bdf8 !important;
-        font-weight: 700 !important;
-        text-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+    /* الوصف الفرعي */
+    .sub-title {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        text-align: center;
+        margin-bottom: 25px;
     }
 
-    /* تحويل مستطيل الرفع بالكامل للون الداكن والنيون (إلغاء الأبيض تماماً) */
-    div[data-testid="stFileUploadDropzone"] {
-        background-color: #111827 !important;
-        border: 2px dashed #00f2fe !important;
+    /* إجبار مستطيل الرفع بالكامل على الثيم الداكن والنيون */
+    div[data-testid="stFileUploader"], 
+    div[data-testid="stFileUploadDropzone"],
+    section[data-testid="stFileUploadDropzone"] {
+        background-color: #0f172a !important;
+        border: 1px dashed #00f2fe !important;
         border-radius: 16px !important;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.25) !important;
-        transition: all 0.3s ease-in-out !important;
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.15) !important;
+        transition: all 0.3s ease !important;
+        padding: 20px !important;
     }
+
     div[data-testid="stFileUploadDropzone"]:hover {
         border-color: #ff007f !important;
-        box-shadow: 0 0 25px rgba(255, 0, 127, 0.5) !important;
+        box-shadow: 0 0 20px rgba(255, 0, 127, 0.4) !important;
     }
-    div[data-testid="stFileUploadDropzone"] * {
+
+    /* تحويل نصوص داخل المستطيل للون الفاتح والنيون */
+    div[data-testid="stFileUploadDropzone"] span,
+    div[data-testid="stFileUploadDropzone"] small,
+    div[data-testid="stFileUploadDropzone"] div {
         color: #38bdf8 !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* تعديل زر الرفع نفسه داخل المستطيل */
+    div[data-testid="stFileUploadDropzone"] button {
+        background: linear-gradient(135deg, #00f2fe 0%, #00b4d8 100%) !important;
+        color: #080b11 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.3) !important;
     }
 
     /* كروت المقاييس النيون */
     div[data-testid="stMetric"] {
-        background: rgba(15, 23, 42, 0.8) !important;
-        border: 1px solid rgba(56, 189, 248, 0.3) !important;
-        border-radius: 16px !important;
-        padding: 20px !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 10px rgba(56, 189, 248, 0.15) !important;
-        backdrop-filter: blur(10px);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    div[data-testid="stMetric"]:hover {
-        transform: translateY(-7px) scale(1.02);
-        border-color: #00f2fe !important;
-        box-shadow: 0 10px 30px rgba(0, 242, 254, 0.35) !important;
+        background: #0f172a !important;
+        border: 1px solid rgba(56, 189, 248, 0.2) !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
     }
     div[data-testid="stMetricValue"] {
         color: #00f2fe !important;
-        font-size: 2.2rem !important;
-        font-weight: 800 !important;
-        text-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
     }
     div[data-testid="stMetricLabel"] {
         color: #94a3b8 !important;
-        font-size: 1rem !important;
-        font-weight: 600 !important;
+        font-size: 0.9rem !important;
     }
 
     /* أزرار التحميل */
     .stButton>button, div[data-testid="stDownloadButton"]>button {
         background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
-        color: #090d16 !important;
+        color: #080b11 !important;
         border: none !important;
-        border-radius: 30px !important;
-        font-weight: 800 !important;
-        font-size: 1rem !important;
-        padding: 12px 30px !important;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.4) !important;
-        transition: all 0.3s ease !important;
+        border-radius: 20px !important;
+        font-weight: bold !important;
+        font-size: 0.95rem !important;
+        padding: 10px 24px !important;
+        box-shadow: 0 0 12px rgba(0, 242, 254, 0.3) !important;
     }
     .stButton>button:hover, div[data-testid="stDownloadButton"]>button:hover {
         background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%) !important;
         color: #ffffff !important;
-        box-shadow: 0 0 25px rgba(255, 0, 127, 0.7) !important;
-        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(255, 0, 127, 0.6) !important;
     }
 
-    /* جداول داكنة */
+    /* جداول البيانات */
     div[data-testid="stDataFrame"] {
-        background: rgba(15, 23, 42, 0.9) !important;
-        border: 1px solid rgba(56, 189, 248, 0.2) !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
-    }
-
-    div.stAlert {
-        background: rgba(30, 41, 59, 0.8) !important;
-        border: 1px solid #00e676 !important;
-        color: #00e676 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 0 15px rgba(0, 230, 118, 0.2) !important;
+        background: #0f172a !important;
+        border: 1px solid rgba(56, 189, 248, 0.15) !important;
+        border-radius: 10px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. الواجهة الرئيسية
+# 3. الواجهة الرئيسية الهادئة
 st.title("⚡ RIVEN | Cyber Stock Engine")
-st.write("المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير.")
+st.markdown("<div class='sub-title'>المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير</div>", unsafe_allow_html=True)
 
-# 4. رفع الملف
-with st.container():
-    st.markdown("### 📥 رفع شيت الإكسيل الموحد (.xlsx)")
-    uploaded_file = st.file_uploader("", type=["xlsx"])
+# 4. رفع الملف بدون عناوين مزعجة
+uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# 5. معالجة البيانات وانيميشن التحميل الخاص بالملابس
+# 5. معالجة البيانات وأنيميشن التحميل الخاص بالملابس
 if uploaded_file is not None:
     fashion_icons = ["👔", "👕", "👗", "👖", "👠", "🧥", "🛍️"]
     status_text = st.empty()
     progress_bar = st.progress(0)
 
     for step in range(1, 101):
-        time.sleep(0.02)
+        time.sleep(0.015)
         progress_bar.progress(step)
         current_icon = fashion_icons[(step // 15) % len(fashion_icons)]
         
@@ -169,14 +168,14 @@ if uploaded_file is not None:
         total_items = len(df_prep)
         shortage_items = (df_prep['diff'] < 0).sum()
 
-        st.markdown("### 📊 الداشبورد التفاعلية")
+        st.markdown("### 📊 الداشبورد")
         c1, c2, c3 = st.columns(3)
         with c1:
             st.metric(label="📦 إجمالي الأصناف والمقاسات", value=f"{total_items:,}")
         with c2:
-            st.metric(label="🚨 أصناف العجز (المطلوب > المتاح)", value=f"{shortage_items:,}")
+            st.metric(label="🚨 أصناف العجز", value=f"{shortage_items:,}")
         with c3:
-            st.metric(label="🏬 عدد الفروع المشاركة", value=f"{len(branch_cols)} فرع")
+            st.metric(label="🏬 عدد الفروع", value=f"{len(branch_cols)} فرع")
 
         st.markdown("---")
 
@@ -200,7 +199,7 @@ if uploaded_file is not None:
         st.markdown("---")
 
         # الشيت النهائي
-        st.markdown("### ✅ تصدير الشيت النهائي للتحضير")
+        st.markdown("### ✅ الشيت النهائي للتحضير")
         buffer_final = io.BytesIO()
         with pd.ExcelWriter(buffer_final, engine='openpyxl') as writer:
             df_prep.to_excel(writer, index=False, sheet_name='التحضير_النهائي')
