@@ -11,10 +11,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم النيون المتقدم والحركات التفاعلية
+# 2. تصميم النيون المتقدم وتعديل صندوق الرفع
 st.markdown("""
     <style>
-    /* خلفية ليلي داكنة وشاملة للموقع */
+    /* خلفية ليلي داكنة وشاملة */
     .stApp {
         background-color: #0b0f19 !important;
         color: #e2e8f0 !important;
@@ -40,24 +40,33 @@ st.markdown("""
         text-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
     }
 
-    /* حاوية رفع الملفات بتأثير النيون الزجاجي */
+    /* تعديل حاوية رفع الملفات لتلائم الثيم الداكن تماماً */
     div[data-testid="stFileUploadDropzone"] {
-        background: rgba(15, 23, 42, 0.75) !important;
-        border: 2px solid #00f2fe !important;
-        border-radius: 16px !important;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.25), inset 0 0 15px rgba(0, 242, 254, 0.1) !important;
+        background: rgba(15, 23, 42, 0.85) !important;
+        border: 2px dashed #00f2fe !important;
+        border-radius: 20px !important;
+        box-shadow: 0 0 20px rgba(0, 242, 254, 0.2), inset 0 0 15px rgba(0, 242, 254, 0.1) !important;
         transition: all 0.4s ease-in-out !important;
+        color: #e2e8f0 !important;
     }
     div[data-testid="stFileUploadDropzone"]:hover {
         border-color: #ff007f !important;
-        box-shadow: 0 0 25px rgba(255, 0, 127, 0.5), inset 0 0 20px rgba(255, 0, 127, 0.2) !important;
-        transform: translateY(-3px);
+        box-shadow: 0 0 30px rgba(255, 0, 127, 0.6), inset 0 0 20px rgba(255, 0, 127, 0.2) !important;
+        transform: translateY(-4px);
     }
-    div[data-testid="stFileUploadDropzone"] div[class*="StyledFileUploadDescription"] {
-        color: #38bdf8 !important;
+    div[data-testid="stFileUploadDropzone"] button {
+        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
+        color: #090d16 !important;
+        border: none !important;
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.4) !important;
+    }
+    div[data-testid="stFileUploadDropzone"] small {
+        color: #94a3b8 !important;
     }
 
-    /* كروت المقاييس (Metric Cards) النيون */
+    /* كروت المقاييس النيون */
     div[data-testid="stMetric"] {
         background: rgba(15, 23, 42, 0.8) !important;
         border: 1px solid rgba(56, 189, 248, 0.3) !important;
@@ -84,7 +93,7 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
-    /* أزرار التحميل مع حركة نيون تفاعلية */
+    /* أزرار التحميل */
     .stButton>button, div[data-testid="stDownloadButton"]>button {
         background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
         color: #090d16 !important;
@@ -103,7 +112,13 @@ st.markdown("""
         transform: scale(1.05);
     }
 
-    /* تنسيق الجداول الداكنة */
+    /* شريط التقدم النيون */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(90deg, #00f2fe, #ff007f) !important;
+        box-shadow: 0 0 15px #00f2fe;
+    }
+
+    /* جداول داكنة */
     div[data-testid="stDataFrame"] {
         background: rgba(15, 23, 42, 0.9) !important;
         border: 1px solid rgba(56, 189, 248, 0.2) !important;
@@ -111,13 +126,6 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
     }
 
-    /* شريط التقدم التفاعلي */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #00f2fe, #ff007f) !important;
-        box-shadow: 0 0 15px #00f2fe;
-    }
-
-    /* تنبيهات النيون */
     div.stAlert {
         background: rgba(30, 41, 59, 0.8) !important;
         border: 1px solid #00e676 !important;
@@ -132,26 +140,30 @@ st.markdown("""
 st.title("⚡ RIVEN | Cyber Stock Engine")
 st.write("المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير.")
 
-# 4. رفع الملف
+# 4. منطقة رفع الملف
 with st.container():
     st.markdown("### 📥 رفع شيت الإكسيل الموحد (.xlsx)")
     uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# 5. معالجة البيانات مع شريط تحميل تفاعلي نيون
+# 5. معالجة البيانات وانيميشن التحميل الخاص بالملابس
 if uploaded_file is not None:
-    # انيميشن تحميل حقيقي وديناميكي
-    progress_bar = st.progress(0)
+    fashion_icons = ["👔", "👕", "👗", "👖", "👠", "🧥", "🛍️"]
     status_text = st.empty()
+    progress_bar = st.progress(0)
 
-    for percent_complete in range(1, 101, 20):
-        time.sleep(0.1)
-        progress_bar.progress(percent_complete)
-        if percent_complete < 40:
-            status_text.markdown("⚡ *جاري قراءة ملفات الإكسيل والاستوك...*")
-        elif percent_complete < 80:
-            status_text.markdown("⚡ *جاري مطابقة الأقسام والفروقات وتوليد البيانات...*")
+    for step in range(1, 101):
+        time.sleep(0.02)
+        progress_bar.progress(step)
+        
+        # تغيير الأيقونة تلقائياً مع كل زيادة في نسبة التحميل
+        current_icon = fashion_icons[(step // 15) % len(fashion_icons)]
+        
+        if step < 40:
+            status_text.markdown(f"### {current_icon} *جاري مطابقة منتجات الاستوك والقطع...*")
+        elif step < 80:
+            status_text.markdown(f"### {current_icon} *جاري توزيع الكميات على الفروع وتحديد العجز...*")
         else:
-            status_text.markdown("⚡ *تجهيز الداشبورد التفاعلية...*")
+            status_text.markdown(f"### {current_icon} *تجهيز كروت البيانات والتقرير النهائي...*")
 
     progress_bar.empty()
     status_text.empty()
@@ -169,20 +181,20 @@ if uploaded_file is not None:
         df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
         df_prep['diff'] = df_prep['stock'] - df_prep['qty']
 
-        st.success("✅ تم مكتمل التحليل ومطابقة البيانات بنجاح!")
+        st.success("✨ تم تحليل شيتات الملابس والاستوك بنجاح!")
 
-        # المقاييس الرئيسية بتصميم نيون
+        # المقاييس الرئيسية
         total_items = len(df_prep)
         shortage_items = (df_prep['diff'] < 0).sum()
 
         st.markdown("### 📊 الداشبورد التفاعلية")
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric(label="📦 إجمالي الأصناف", value=f"{total_items:,}")
+            st.metric(label="📦 إجمالي الأصناف والمقاسات", value=f"{total_items:,}")
         with c2:
-            st.metric(label="⚠️ أصناف العجز (مطلوب > متاح)", value=f"{shortage_items:,}")
+            st.metric(label="🚨 أصناف العجز (المطلوب > المتاح)", value=f"{shortage_items:,}")
         with c3:
-            st.metric(label="🏬 عدد الفروع", value=f"{len(branch_cols)} فرع")
+            st.metric(label="🏬 عدد الفروع المشاركة", value=f"{len(branch_cols)} فرع")
 
         st.markdown("---")
 
@@ -219,4 +231,4 @@ if uploaded_file is not None:
         )
 
     except Exception as e:
-        st.error(f"خطأ في قراءة البيانات: {e}")
+        st.error(f"حدث خطأ في قراءة البيانات: {e}")
