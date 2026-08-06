@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import time
+import streamlit.components.v1 as components
 
 # 1. إعدادات الصفحة
 st.set_page_config(
@@ -11,10 +12,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. إجبار تلوين كافة طبقات المستطيل للون الداكن والنيون
+# 2. تصميم النيون المتقدم وتنسيق كافة العناصر
 st.markdown("""
     <style>
-    /* خلفية التطبيق */
+    /* خلفية التطبيق الداكنة */
     .stApp {
         background-color: #080b11 !important;
         color: #e2e8f0 !important;
@@ -42,7 +43,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* استهداف وإلغاء خلفية جميع عناصر مستطيل الرفع الداخلية */
+    /* تلوين مستطيل الرفع بالكامل للثيم الداكن والنيون */
     div[data-testid="stFileUploader"],
     div[data-testid="stFileUploader"] *,
     div[data-testid="stFileUploaderDropzone"],
@@ -54,7 +55,6 @@ st.markdown("""
         color: #00f2fe !important;
     }
 
-    /* ضبط حدود المستطيل وتوهج النيون */
     div[data-testid="stFileUploaderDropzone"],
     section[data-testid="stFileUploaderDropzone"] {
         border: 2px dashed #00f2fe !important;
@@ -64,14 +64,12 @@ st.markdown("""
         padding: 20px !important;
     }
 
-    /* التفاعلية عند تحريك الماوس/اللمس */
     div[data-testid="stFileUploaderDropzone"]:hover,
     section[data-testid="stFileUploaderDropzone"]:hover {
         border-color: #ff007f !important;
         box-shadow: 0 0 25px rgba(255, 0, 127, 0.5) !important;
     }
 
-    /* تعديل زر الرفع Upload بالداخل */
     div[data-testid="stFileUploaderDropzone"] button,
     section[data-testid="stFileUploaderDropzone"] button {
         background: linear-gradient(135deg, #00f2fe 0%, #00b4d8 100%) !important;
@@ -133,8 +131,28 @@ st.markdown("<div class='sub-title'>المحرك الذكي لتحليل وتط�
 # 4. رفع الملف
 uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# 5. معالجة البيانات وأنيميشن التحميل الخاص بالملابس
-if uploaded_file is not None:
+# 5. عرض الأنيميشن الـ 3D التفاعلي عند الانتظار (قبل رفع الملف)
+if uploaded_file is None:
+    lottie_html = """
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px;">
+        <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
+        <dotlottie-player 
+            src="https://lottie.host/80beee9e-3d1b-4d43-9bc0-043f05d5db32/XwH8GqLwA6.json" 
+            background="transparent" 
+            speed="1" 
+            style="width: 280px; height: 280px; filter: drop-shadow(0 0 15px rgba(0, 242, 254, 0.4));" 
+            loop 
+            autoplay>
+        </dotlottie-player>
+        <p style="color: #38bdf8; font-family: sans-serif; font-size: 0.95rem; font-weight: 600; text-shadow: 0 0 10px rgba(56, 189, 248, 0.4); margin-top: 10px;">
+            ⚡ النظام بانتظار رفع شيت الإكسيل للبدء في المعالجة...
+        </p>
+    </div>
+    """
+    components.html(lottie_html, height=350)
+
+# 6. معالجة البيانات وأنيميشن التحميل عند رفع الملف
+else:
     fashion_icons = ["👔", "👕", "👗", "👖", "👠", "🧥", "🛍️"]
     status_text = st.empty()
     progress_bar = st.progress(0)
