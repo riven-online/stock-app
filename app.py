@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم النيون المتقدم وتنسيق الأنيميشن الـ 3D وتعديل زر Upload
+# 2. تصميم CSS متطور للتأثيرات الضوئية والليد والموشن
 st.markdown("""
     <style>
     /* خلفية التطبيق الداكنة */
@@ -42,20 +42,10 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* تلوين مستطيل الرفع بالكامل للثيم الداكن والنيون */
-    div[data-testid="stFileUploader"],
-    div[data-testid="stFileUploader"] *,
-    div[data-testid="stFileUploaderDropzone"],
-    div[data-testid="stFileUploaderDropzone"] *,
-    section[data-testid="stFileUploaderDropzone"],
-    section[data-testid="stFileUploaderDropzone"] * {
-        background-color: #0f172a !important;
-        background: #0f172a !important;
-        color: #00f2fe !important;
-    }
-
+    /* مستطيل الرفع نيون */
     div[data-testid="stFileUploaderDropzone"],
     section[data-testid="stFileUploaderDropzone"] {
+        background-color: #0f172a !important;
         border: 2px dashed #00f2fe !important;
         border-radius: 16px !important;
         box-shadow: 0 0 18px rgba(0, 242, 254, 0.25) !important;
@@ -63,16 +53,8 @@ st.markdown("""
         padding: 20px !important;
     }
 
-    div[data-testid="stFileUploaderDropzone"]:hover,
-    section[data-testid="stFileUploaderDropzone"]:hover {
-        border-color: #ff007f !important;
-        box-shadow: 0 0 25px rgba(255, 0, 127, 0.5) !important;
-    }
-
-    /* تعديل إجبار خلفية وزر كلمة Upload والخط ليكون واضحاً وجذاباً */
     div[data-testid="stFileUploaderDropzone"] button,
-    section[data-testid="stFileUploaderDropzone"] button,
-    button[data-testid="stBaseButton-secondary"] {
+    section[data-testid="stFileUploaderDropzone"] button {
         background: linear-gradient(135deg, #00f2fe 0%, #00b4d8 100%) !important;
         color: #080b11 !important;
         border: none !important;
@@ -81,14 +63,54 @@ st.markdown("""
         box-shadow: 0 0 12px rgba(0, 242, 254, 0.5) !important;
     }
 
-    div[data-testid="stFileUploaderDropzone"] button *,
-    section[data-testid="stFileUploaderDropzone"] button * {
-        color: #080b11 !important;
-        background: transparent !important;
-        font-weight: 800 !important;
+    /* بنر RIVEN مع موشن ليد */
+    .riven-success-banner {
+        background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        border: 1px solid #00f2fe;
+        border-radius: 14px;
+        padding: 16px;
+        text-align: center;
+        margin-bottom: 25px;
+        box-shadow: 0 0 20px rgba(0, 242, 254, 0.35);
+        position: relative;
+        overflow: hidden;
+        animation: pulseBanner 2.5s infinite alternate;
     }
 
-    /* أنيميشن نيون 3D كود وسيرفر متفاعل ومدمج بدون روابط خارجية */
+    .riven-banner-title {
+        color: #00f2fe;
+        font-size: 1.4rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    /* أيقونات الليد المتحركة الصغيرة (بديل الإيموجي) */
+    .led-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 8px currentColor;
+    }
+    .led-blue { background-color: #00f2fe; color: #00f2fe; animation: blink 1.2s infinite alternate; }
+    .led-red { background-color: #ff007f; color: #ff007f; animation: blink 0.8s infinite alternate; }
+    .led-green { background-color: #00ff88; color: #00ff88; animation: blink 1.5s infinite alternate; }
+
+    @keyframes blink {
+        0% { opacity: 0.3; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 15px currentColor; }
+    }
+
+    @keyframes pulseBanner {
+        0% { border-color: #00f2fe; box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
+        100% { border-color: #38bdf8; box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); }
+    }
+
+    /* أنيميشن نيون 3D للتحميل */
     .cyber-loader-container {
         display: flex;
         flex-direction: column;
@@ -135,10 +157,6 @@ st.markdown("""
         background: #0f172a;
         border: 2px solid #38bdf8;
         border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
         box-shadow: 0 0 20px #00f2fe;
         animation: pulseCore 1.5s ease-in-out infinite alternate;
     }
@@ -167,22 +185,67 @@ st.markdown("""
         text-align: center;
     }
 
-    /* كروت المقاييس النيون */
-    div[data-testid="stMetric"] {
-        background: #0f172a !important;
-        border: 1px solid rgba(56, 189, 248, 0.2) !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+    /* تصاميم كروت الإحصائيات */
+    .custom-card {
+        background: #0f172a;
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 15px;
+        position: relative;
+        transition: all 0.3s ease;
     }
-    div[data-testid="stMetricValue"] {
+
+    .card-normal {
+        border: 1px solid rgba(0, 242, 254, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 242, 254, 0.12);
+    }
+    .card-normal:hover {
+        box-shadow: 0 0 22px rgba(0, 242, 254, 0.35);
+        border-color: #00f2fe;
+    }
+
+    .card-warning {
+        border: 1px solid rgba(255, 0, 127, 0.4);
+        box-shadow: 0 4px 20px rgba(255, 0, 127, 0.15);
+    }
+    .card-warning:hover {
+        box-shadow: 0 0 25px rgba(255, 0, 127, 0.45);
+        border-color: #ff007f;
+    }
+
+    .card-title {
+        color: #cbd5e1 !important;
+        font-size: 0.95rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .card-value-blue {
         color: #00f2fe !important;
-        font-size: 1.8rem !important;
-        font-weight: 700 !important;
+        font-size: 2rem;
+        font-weight: 800;
+        text-shadow: 0 0 12px rgba(0, 242, 254, 0.4);
     }
-    div[data-testid="stMetricLabel"] {
-        color: #94a3b8 !important;
-        font-size: 0.9rem !important;
+
+    .card-value-red {
+        color: #ff007f !important;
+        font-size: 2rem;
+        font-weight: 800;
+        text-shadow: 0 0 12px rgba(255, 0, 127, 0.5);
+    }
+
+    .section-title {
+        color: #f8fafc;
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 15px;
+        margin-bottom: 15px;
     }
 
     /* أزرار التحميل */
@@ -212,7 +275,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 3. الواجهة الرئيسية
-st.title("⚡ RIVEN | Cyber Stock Engine")
+st.title("RIVEN | Cyber Stock Engine")
 st.markdown("<div class='sub-title'>المحرك الذكي لتحليل وتطابق استوك الفروع والتحضير</div>", unsafe_allow_html=True)
 
 # 4. رفع الملف
@@ -225,29 +288,27 @@ if uploaded_file is None:
             <div class="cyber-spinner">
                 <div class="cyber-ring"></div>
                 <div class="cyber-ring-2"></div>
-                <div class="cyber-core">💻</div>
+                <div class="cyber-core"></div>
             </div>
-            <div class="cyber-text">⚡ النظام بانتظار رفع شيت الإكسيل للبدء في المعالجة...</div>
+            <div class="cyber-text">النظام بانتظار رفع شيت الإكسيل للبدء في المعالجة...</div>
         </div>
     """, unsafe_allow_html=True)
 
 # 6. معالجة البيانات وأنيميشن التحميل عند رفع الملف
 else:
-    fashion_icons = ["👔", "👕", "👗", "👖", "👠", "🧥", "🛍️"]
     status_text = st.empty()
     progress_bar = st.progress(0)
 
     for step in range(1, 101):
-        time.sleep(0.015)
+        time.sleep(0.012)
         progress_bar.progress(step)
-        current_icon = fashion_icons[(step // 15) % len(fashion_icons)]
         
         if step < 40:
-            status_text.markdown(f"### {current_icon} *جاري مطابقة منتجات الاستوك والقطع...*")
+            status_text.markdown("##### <span class='led-dot led-blue'></span> *جاري مطابقة منتجات الاستوك والقطع...*", unsafe_allow_html=True)
         elif step < 80:
-            status_text.markdown(f"### {current_icon} *جاري توزيع الكميات على الفروع وتحديد العجز...*")
+            status_text.markdown("##### <span class='led-dot led-green'></span> *جاري توزيع الكميات على الفروع وتحديد العجز...*", unsafe_allow_html=True)
         else:
-            status_text.markdown(f"### {current_icon} *تجهيز كروت البيانات والتقرير النهائي...*")
+            status_text.markdown("##### <span class='led-dot led-red'></span> *تجهيز كروت البيانات والتقرير النهائي...*", unsafe_allow_html=True)
 
     progress_bar.empty()
     status_text.empty()
@@ -265,25 +326,50 @@ else:
         df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
         df_prep['diff'] = df_prep['stock'] - df_prep['qty']
 
-        st.success("✨ تم تحليل شيتات الملابس والاستوك بنجاح!")
+        # بنر Riven التفاعلي بالليد الموشن
+        st.markdown("""
+            <div class="riven-success-banner">
+                <div class="riven-banner-title">
+                    <span class="led-dot led-green"></span>
+                    Riven
+                    <span class="led-dot led-blue"></span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
         # المقاييس الرئيسية
         total_items = len(df_prep)
         shortage_items = (df_prep['diff'] < 0).sum()
 
-        st.markdown("### 📊 الداشبورد")
+        st.markdown("<div class='section-title'><span class='led-dot led-blue'></span> الداشبورد وتحليل البيانات</div>", unsafe_allow_html=True)
+        
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric(label="📦 إجمالي الأصناف والمقاسات", value=f"{total_items:,}")
+            st.markdown(f"""
+                <div class="custom-card card-normal">
+                    <div class="card-title"><span class="led-dot led-blue"></span> إجمالي الأصناف والمقاسات</div>
+                    <div class="card-value-blue">{total_items:,}</div>
+                </div>
+            """, unsafe_allow_html=True)
         with c2:
-            st.metric(label="🚨 أصناف العجز", value=f"{shortage_items:,}")
+            st.markdown(f"""
+                <div class="custom-card card-warning">
+                    <div class="card-title"><span class="led-dot led-red"></span> أصناف العجز</div>
+                    <div class="card-value-red">{shortage_items:,}</div>
+                </div>
+            """, unsafe_allow_html=True)
         with c3:
-            st.metric(label="🏬 عدد الفروع", value=f"{len(branch_cols)} فرع")
+            st.markdown(f"""
+                <div class="custom-card card-normal">
+                    <div class="card-title"><span class="led-dot led-green"></span> عدد الفروع</div>
+                    <div class="card-value-blue">{len(branch_cols)} فرع</div>
+                </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("---")
 
         # عرض العجز وتصديره
-        st.markdown("### 🚨 الأصناف التي بها عجز رصيد")
+        st.markdown("<div class='section-title'><span class='led-dot led-red'></span> الأصناف التي بها عجز رصيد</div>", unsafe_allow_html=True)
         df_shortage = df_prep[df_prep['diff'] < 0].copy()
 
         buffer_shortage = io.BytesIO()
@@ -291,7 +377,7 @@ else:
             df_shortage.to_excel(writer, index=False, sheet_name='تقرير_العجز')
 
         st.download_button(
-            label="📥 تحميل كشف العجز (Excel)",
+            label="تحميل كشف العجز (Excel)",
             data=buffer_shortage.getvalue(),
             file_name="تقرير_العجز_والفروقات.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -302,13 +388,13 @@ else:
         st.markdown("---")
 
         # الشيت النهائي
-        st.markdown("### ✅ الشيت النهائي للتحضير")
+        st.markdown("<div class='section-title'><span class='led-dot led-green'></span> الشيت النهائي للتحضير</div>", unsafe_allow_html=True)
         buffer_final = io.BytesIO()
         with pd.ExcelWriter(buffer_final, engine='openpyxl') as writer:
             df_prep.to_excel(writer, index=False, sheet_name='التحضير_النهائي')
 
         st.download_button(
-            label="📥 تحميل الشيت النهائي الكامل (Excel)",
+            label="تحميل الشيت النهائي الكامل (Excel)",
             data=buffer_final.getvalue(),
             file_name="الخطه_النهائيه_للكشوفات.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
