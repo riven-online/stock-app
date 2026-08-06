@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم النيون المتقدم وتنسيق الأنيميشن الـ 3D
+# 2. تصميم النيون المتقدم وتنسيق الأنيميشن الـ 3D وتعديل زر Upload
 st.markdown("""
     <style>
     /* خلفية التطبيق الداكنة */
@@ -69,14 +69,23 @@ st.markdown("""
         box-shadow: 0 0 25px rgba(255, 0, 127, 0.5) !important;
     }
 
+    /* تعديل إجبار خلفية وزر كلمة Upload والخط ليكون واضحاً وجذاباً */
     div[data-testid="stFileUploaderDropzone"] button,
-    section[data-testid="stFileUploaderDropzone"] button {
+    section[data-testid="stFileUploaderDropzone"] button,
+    button[data-testid="stBaseButton-secondary"] {
         background: linear-gradient(135deg, #00f2fe 0%, #00b4d8 100%) !important;
         color: #080b11 !important;
         border: none !important;
         border-radius: 8px !important;
-        font-weight: bold !important;
-        box-shadow: 0 0 10px rgba(0, 242, 254, 0.4) !important;
+        font-weight: 800 !important;
+        box-shadow: 0 0 12px rgba(0, 242, 254, 0.5) !important;
+    }
+
+    div[data-testid="stFileUploaderDropzone"] button *,
+    section[data-testid="stFileUploaderDropzone"] button * {
+        color: #080b11 !important;
+        background: transparent !important;
+        font-weight: 800 !important;
     }
 
     /* أنيميشن نيون 3D كود وسيرفر متفاعل ومدمج بدون روابط خارجية */
