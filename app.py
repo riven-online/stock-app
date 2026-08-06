@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import io
-import time
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # 1. إعدادات الصفحة
 st.set_page_config(
@@ -12,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم CSS متطور للتأثيرات الضوئية والليد
+# 2. تصميم CSS متطور وتثبيت الأعمدة (Sticky Columns) بدون مكتبات خارجية
 st.markdown("""
     <style>
     .stApp {
@@ -171,15 +169,23 @@ st.markdown("""
         padding: 8px 20px !important;
         box-shadow: 0 0 12px rgba(0, 242, 254, 0.3) !important;
     }
-    div[data-testid="stDownloadButton"]>button:hover {
-        background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%) !important;
-        color: #ffffff !important;
-        box-shadow: 0 0 20px rgba(255, 0, 127, 0.6) !important;
+
+    /* خاصية تثبيت الأعمدة الأولى أثناء التمرير الأفقي للجدول */
+    div[data-testid="stDataFrame"] table th:nth-child(-n+6),
+    div[data-testid="stDataFrame"] table td:nth-child(-n+6) {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 2 !important;
+        background-color: #0f172a !important;
+        border-right: 1px solid rgba(0, 242, 254, 0.2) !important;
+    }
+    div[data-testid="stDataFrame"] table th:nth-child(-n+6) {
+        z-index: 3 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. كارت Riven العلوي فقط
+# 3. كارت Riven العلوي
 st.markdown("""
     <div class="riven-success-banner">
         <div class="riven-banner-title">
@@ -207,7 +213,7 @@ if uploaded_file is not None:
         df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
         df_prep['diff'] = df_prep['stock'] - df_prep['qty']
 
-        # ضبط أنواع البيانات بدقة لمنع تداخل المقاسات مع الأرقام عند التصدير
+        # ضبط وإجبار أنواع البيانات لمنع أي تداخل بين الأرقام والمقاسات عند التصدير
         df_prep['Item-Size'] = df_prep['Item-Size'].astype(str)
         df_prep['Item'] = df_prep['Item'].astype(str)
         df_prep['Size'] = df_prep['Size'].astype(str)
@@ -243,14 +249,14 @@ if uploaded_file is not None:
 
         st.markdown("---")
 
-        # الأصناف التي بها عجز
-        st.markdown("<div class='section-title'><span class='led-dot led-red'></span> الأصناف التي بها عجز رصيد</div>", unsafe_allow_html=True)
-        
-        # تصفية وتجهيز ترتيب الأعمدة السليم لملف التصدير
+        # ترتيب الأعمدة لتكون الأعمدة المقتطعة في البداية
         export_cols = ['Item-Size', 'Item', 'Size', 'qty', 'stock', 'diff'] + branch_cols
         df_shortage = df_prep[df_prep['diff'] < 0][export_cols].copy()
 
-        # تصدير منسق وبدون لخبطة في الخلايا
+        # الأصناف التي بها عجز
+        st.markdown("<div class='section-title'><span class='led-dot led-red'></span> الأصناف التي بها عجز رصيد</div>", unsafe_allow_html=True)
+
+        # زر تحميل كشف العجز
         buffer_shortage = io.BytesIO()
         with pd.ExcelWriter(buffer_shortage, engine='openpyxl') as writer:
             df_shortage.to_excel(writer, index=False, sheet_name='تقرير_العجز')
@@ -262,24 +268,8 @@ if uploaded_file is not None:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-        # عرض الجدول مع تثبيت الأعمدة حتى هيدر (diff) أثناء التمرير الأفقي
-        gb = GridOptionsBuilder.from_dataframe(df_shortage)
-        gb.configure_default_column(resizable=True, filterable=True, sortable=True)
-        
-        # تثبيت الأعمدة الأساسية على اليمين
-        sticky_cols = ['Item-Size', 'Item', 'Size', 'qty', 'stock', 'diff']
-        for col in sticky_cols:
-            gb.configure_column(col, pinned='right')
-
-        grid_options = gb.build()
-        AgGrid(
-            df_shortage,
-            gridOptions=grid_options,
-            theme='balham-dark',
-            height=400,
-            fit_columns_on_grid_load=False,
-            allow_unsafe_jscode=True
-        )
+        # عرض الجدول الأصلي من Streamlit مع تطبيق التثبيت عبر CSS
+        st.dataframe(df_shortage, use_container_width=True, height=420)
 
         st.markdown("---")
 
