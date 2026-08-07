@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment
-from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.utils import get_column_letter
 import io
@@ -129,20 +128,31 @@ def process_plan_and_stock(uploaded_file):
     for row in df_stock.itertuples(index=False):
         ws_stock.append([row[0], row[1]])
 
-    # 3. ورقة الاستوك النهائي
+    # 3. ورقة الاستوك النهائي (الجديدة للترحيل للبلان القادمة)
     ws_final_stock = wb.create_sheet(title='الاستوك النهائي')
     ws_final_stock.views.sheetView[0].showGridLines = True
     ws_final_stock.append(['Product/Barcode', 'Final_Quantity'])
 
     store_cols = df_plan.columns[3:].tolist()
     
-    # بناء الأعمدة المحدثة بدقة
+    # بناء الأعمدة المحدثة بدقة بدون عمود ملاحظات الدفعات
     new_headers = (
         ['Item-Size', 'Item', 'Size'] 
         + store_cols 
-        + ['إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية', 'ملاحظات الدفعات']
+        + ['إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية']
     )
     ws_plan.append(new_headers)
+
+    # تحديد الحروف المرجعية للأعمدة ديناميكياً
+    last_store_col_idx = 3 + len(store_cols)  # عمود آخر فرع
+    col_last_store = get_column_letter(last_store_col_idx)
+    
+    col_total_plan = get_column_letter(last_store_col_idx + 1)      # إجمالي الخطة
+    col_stock_qty = get_column_letter(last_store_col_idx + 2)        # رصيد الاستوك
+    col_prep_qty = get_column_letter(last_store_col_idx + 3)         # تجهيز الخطة
+    col_final_stock = get_column_letter(last_store_col_idx + 4)      # رصيد الاستوك النهائي
+    col_deficit = get_column_letter(last_store_col_idx + 5)          # العجز
+    col_coverage = get_column_letter(last_store_col_idx + 6)         # حالة التغطية
 
     header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
     header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
@@ -162,40 +172,42 @@ def process_plan_and_stock(uploaded_file):
         size = row[2]
         store_vals = list(row[3:])
         
-        total_plan_fmt = f"=SUM(D{idx}:AM{idx})"
+        total_plan_fmt = f"=SUM(D{idx}:{col_last_store}{idx})"
         stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
-        prepped_qty = 0
+        prepped_qty = 0  # قيمة خلية تجهيز الخطة المبدئية
         
-        final_stock_fmt = f'=MAX(0, AO{idx}-AP{idx})'
-        deficit_fmt = f'=IF(AN{idx}>AO{idx}, AN{idx}-AO{idx}, 0)'
+        # معادلة رصيد الاستوك النهائي (الموجبة فقط)
+        final_stock_fmt = f'=MAX(0, {col_stock_qty}{idx}-{col_prep_qty}{idx})'
         
+        # معادلة العجز الحقيقي
+        deficit_fmt = f'=IF({col_total_plan}{idx}>{col_stock_qty}{idx}, {col_total_plan}{idx}-{col_stock_qty}{idx}, 0)'
+        
+        # معادلة حالة التغطية المحدثة
         coverage_fmt = (
-            f'=IF(AQ{idx}>AN{idx}, "مكتمل بالكامل + فائض مخزون", '
-            f'IF(AQ{idx}=AN{idx}, "مكتمل بالكامل", '
-            f'IF(AO{idx}>0, "تغطية جزئية", "عجز كامل")))'
+            f'=IF({col_final_stock}{idx}>{col_total_plan}{idx}, "مكتمل بالكامل + فائض مخزون", '
+            f'IF({col_final_stock}{idx}={col_total_plan}{idx}, "مكتمل بالكامل", '
+            f'IF({col_stock_qty}{idx}>0, "تغطية جزئية", "عجز كامل")))'
         )
         
-        row_data = [item_size, item, size] + store_vals + [total_plan_fmt, stock_qty_fmt, prepped_qty, final_stock_fmt, deficit_fmt, coverage_fmt, ""]
+        row_data = [item_size, item, size] + store_vals + [total_plan_fmt, stock_qty_fmt, prepped_qty, final_stock_fmt, deficit_fmt, coverage_fmt]
         ws_plan.append(row_data)
 
-        ws_final_stock.append([item_size, f"=Reallocation_Plan!AQ{idx}"])
-
-    # القائمة المنسدلة لعمود ملاحظات الدفعات
-    dv = DataValidation(type="list", formula1='"دفعة 1, دفعة 2, دفعة 3, جاري التجهيز, مؤجل, تم الشحن"', allow_blank=True)
-    ws_plan.add_data_validation(dv)
-    dv.add(f"AT2:AT{num_rows + 1}")
+        # ربط الشيت الثالث (الاستوك النهائي) بعمود رصيد الاستوك النهائي تلقائياً
+        ws_final_stock.append([item_size, f"=Reallocation_Plan!{col_final_stock}{idx}"])
 
     # التنسيقات الشرطية
     yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') 
     red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    
 
+    # التنسيق الشرطي لرصيد الاستوك
     ws_plan.conditional_formatting.add(
-        f"AO2:AO{num_rows + 1}",
+        f"{col_stock_qty}2:{col_stock_qty}{num_rows + 1}",
         CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=yellow_fill)
     )
 
+    # التنسيق الشرطي للعجز
     ws_plan.conditional_formatting.add(
-        f"AR2:AR{num_rows + 1}",
+        f"{col_deficit}2:{col_deficit}{num_rows + 1}",
         CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=red_fill)
     )
 
@@ -297,7 +309,6 @@ if 'excel_out' in st.session_state:
         st.markdown("<h4 style='color:#00f3ff;'>⭕ نسب تغطية الأصناف والحالات</h4>", unsafe_allow_html=True)
         status_counts = df_calc['حالة التغطية'].value_counts().reset_index()
         status_counts.columns = ['الحالة', 'العدد']
-        # استخدام مصفوفة ألوان النيون المخصصة لمنع خطأ AttributeError
         fig_pie = px.pie(status_counts, values='العدد', names='الحالة', hole=0.4,
                          color_discrete_sequence=['#00f3ff', '#ff007f', '#0077ff', '#7928CA'], template='plotly_dark')
         st.plotly_chart(fig_pie, use_container_width=True)
