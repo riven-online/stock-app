@@ -297,8 +297,9 @@ if 'excel_out' in st.session_state:
         st.markdown("<h4 style='color:#00f3ff;'>⭕ نسب تغطية الأصناف والحالات</h4>", unsafe_allow_html=True)
         status_counts = df_calc['حالة التغطية'].value_counts().reset_index()
         status_counts.columns = ['الحالة', 'العدد']
+        # استخدام مصفوفة ألوان النيون المخصصة لمنع خطأ AttributeError
         fig_pie = px.pie(status_counts, values='العدد', names='الحالة', hole=0.4,
-                         color_discrete_sequence=px.colors.sequential.Cyan, template='plotly_dark')
+                         color_discrete_sequence=['#00f3ff', '#ff007f', '#0077ff', '#7928CA'], template='plotly_dark')
         st.plotly_chart(fig_pie, use_container_width=True)
 
     st.markdown("<h3 style='color:#00f3ff;'>🔍 الفحص الدقيق والفلترة التفاعلية</h3>", unsafe_allow_html=True)
