@@ -165,7 +165,7 @@ def process_plan_and_stock(uploaded_file):
         
         total_plan_fmt = f"=SUM(D{idx}:AM{idx})"
         stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
-        prepped_qty = 0  # قيمة خليه تجهيز الخطة المبدئية
+        prepped_qty = 0  # قيمة خلية تجهيز الخطة المبدئية
         
         # معادلة رصيد الاستوك النهائي (الموجبة فقط)
         final_stock_fmt = f'=MAX(0, AO{idx}-AP{idx})'
@@ -257,8 +257,13 @@ if 'excel_out' in st.session_state:
     store_cols = df_plan.columns[3:]
     
     df_calc = df_plan.copy()
+
+    # تحويل كافة أعمدة الفروع لبيانات رقمية بأمان وتفادي خطأ TypeError
+    for c in store_cols:
+        df_calc[c] = pd.to_numeric(df_calc[c], errors='coerce').fillna(0)
+    
     df_calc['إجمالي الخطة'] = df_calc[store_cols].sum(axis=1)
-    df_calc['رصيد الاستوك'] = df_calc['Item-Size'].map(stock_map).fillna(0)
+    df_calc['رصيد الاستوك'] = pd.to_numeric(df_calc['Item-Size'].map(stock_map), errors='coerce').fillna(0)
     df_calc['تجهيز الخطة'] = 0
     df_calc['رصيد الاستوك النهائي'] = (df_calc['رصيد الاستوك'] - df_calc['تجهيز الخطة']).clip(lower=0)
     df_calc['العجز'] = (df_calc['إجمالي الخطة'] - df_calc['رصيد الاستوك']).apply(lambda x: x if x > 0 else 0)
@@ -293,7 +298,7 @@ if 'excel_out' in st.session_state:
     
     with c_chart1:
         st.markdown("<h4 style='color:#ff007f;'>📊 توزيع الفروع الأكثر طلباً</h4>", unsafe_allow_html=True)
-        store_sums = df_plan[store_cols].sum().sort_values(ascending=False).head(10).reset_index()
+        store_sums = df_calc[store_cols].sum().sort_values(ascending=False).head(10).reset_index()
         store_sums.columns = ['الفرع', 'الكمية المطلوبة']
         fig_stores = px.bar(store_sums, x='الفرع', y='الكمية المطلوبة', color='الكمية المطلوبة',
                             color_continuous_scale='Electric', template='plotly_dark')
