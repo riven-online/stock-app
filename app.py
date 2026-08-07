@@ -91,7 +91,7 @@ st.markdown("""
         color: #00f3ff;
     }
 </style>
-""", unsafe_allow_capacity=True)
+""", unsafe_allow_html=True)
 
 
 def process_plan_and_stock(uploaded_file):
@@ -237,7 +237,7 @@ if uploaded_file is not None:
 if 'excel_out' in st.session_state:
     st.divider()
     
-    # 1. لوحة التحميل الممتازة
+    # 1. لوحة التحميل
     col_dl, col_blank = st.columns([1, 2])
     with col_dl:
         st.download_button(
@@ -288,7 +288,7 @@ if 'excel_out' in st.session_state:
 
     st.markdown("---")
 
-    # تحليل الفروع والمقاسات بالكامل
+    # تحليل الفروع والمقاسات
     c_chart1, c_chart2 = st.columns(2)
     
     with c_chart1:
