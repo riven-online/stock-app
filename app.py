@@ -154,6 +154,11 @@ if 'df_main' not in st.session_state:
             branch_cols = [c for c in df_prep.columns[size_idx + 1 : qty_idx] if c not in ['qty', 'stock', 'diff', 'Batch', 'دفعة اولى']]
             
             if 'stock' not in df_prep.columns: df_prep['stock'] = 0
+            
+            # تحويل قيم الفروع لأرقام مع استبدال الأخطاء بصفر للحساب الصحيح
+            for b in branch_cols:
+                df_prep[b] = pd.to_numeric(df_prep[b], errors='coerce')
+                
             df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
             df_prep['diff'] = df_prep['stock'] - df_prep['qty']
             
@@ -211,7 +216,7 @@ else:
     else:
         df_filtered = df_work.copy()
 
-    # دالة البحث الدقيقة (تفرق بين الايتم والايتم سايس)
+    # دالة البحث الدقيقة
     if search_input:
         parts = search_input.split()
         
@@ -240,7 +245,6 @@ else:
     # قائمة خيارات عمود Batch (الدفعة 1 حتى 50)
     batch_options = [""] + [f"الدفعة {i}" for i in range(1, 51)]
 
-    # إعداد تكوين القائمة المنسدلة بدون أخطاء متوافقة مع كل نسخ Streamlit
     column_config = {
         "Batch": st.column_config.SelectboxColumn(
             "Batch",
@@ -265,11 +269,14 @@ else:
     has_changed = False
     for idx in edited_df.index:
         for col in branch_cols + ['Batch']:
-            if st.session_state.df_main.loc[idx, col] != edited_df.loc[idx, col]:
-                st.session_state.df_main.loc[idx, col] = edited_df.loc[idx, col]
+            val = edited_df.loc[idx, col]
+            if st.session_state.df_main.loc[idx, col] != val:
+                st.session_state.df_main.loc[idx, col] = val
                 has_changed = True
 
     if has_changed:
+        for b in branch_cols:
+            st.session_state.df_main[b] = pd.to_numeric(st.session_state.df_main[b], errors='coerce')
         st.session_state.df_main['qty'] = st.session_state.df_main[branch_cols].sum(axis=1)
         st.session_state.df_main['diff'] = st.session_state.df_main['stock'] - st.session_state.df_main['qty']
         save_to_db(st.session_state.df_main, branch_cols, st.session_state.uploaded_file_name)
@@ -277,35 +284,39 @@ else:
 
     st.markdown("---")
 
-    # تصدير البيانات مع المعادلات
-    def export_excel_with_formulas(data_to_export):
+    # دالة إعداد ملف Excel مستقر ومضمون التنزيل
+    def generate_excel_bytes(df_to_export):
         output = io.BytesIO()
+        export_df = df_to_export.copy()
+        
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            data_to_export.to_excel(writer, index=False, sheet_name='Exported_Stock')
+            export_df.to_excel(writer, index=False, sheet_name='Exported_Stock')
             workbook = writer.book
             worksheet = writer.sheets['Exported_Stock']
 
-            qty_col_letter = openpyxl.utils.get_column_letter(data_to_export.columns.get_loc('qty') + 1)
-            stock_col_letter = openpyxl.utils.get_column_letter(data_to_export.columns.get_loc('stock') + 1)
-            diff_col_letter = openpyxl.utils.get_column_letter(data_to_export.columns.get_loc('diff') + 1)
+            qty_col_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc('qty') + 1)
+            stock_col_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc('stock') + 1)
+            diff_col_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc('diff') + 1)
             
-            first_b_letter = openpyxl.utils.get_column_letter(data_to_export.columns.get_loc(branch_cols[0]) + 1)
-            last_b_letter = openpyxl.utils.get_column_letter(data_to_export.columns.get_loc(branch_cols[-1]) + 1)
+            first_b_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc(branch_cols[0]) + 1)
+            last_b_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc(branch_cols[-1]) + 1)
 
-            for row_idx in range(2, len(data_to_export) + 2):
+            for row_idx in range(2, len(export_df) + 2):
                 worksheet[f'{qty_col_letter}{row_idx}'] = f"=SUM({first_b_letter}{row_idx}:{last_b_letter}{row_idx})"
                 worksheet[f'{diff_col_letter}{row_idx}'] = f"={stock_col_letter}{row_idx}-{qty_col_letter}{row_idx}"
 
+        output.seek(0)
         return output.getvalue()
 
-    # زر التحميل المفلتر
+    # قسم التصدير بحسب الفلتر والبحث المعروض حالياً على الموقع
     st.markdown("### 📥 تصدير البيانات حسب الوضع والفلترة الحالية للموقع")
     
     file_label = f"Riven_{view_option}_Filtered.xlsx"
+    excel_data = generate_excel_bytes(df_display[display_cols])
 
     st.download_button(
         label=f"📥 تحميل الشيت المفلتر حالياً على الموقع ({len(df_display)} صنف)",
-        data=export_excel_with_formulas(df_display[display_cols]),
+        data=excel_data,
         file_name=file_label,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
