@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم CSS نيون وتأثيرات
+# 2. تصميم CSS نيون وتثبيت الأعمدة أثناء التمرير
 st.markdown("""
     <style>
     .stApp {
@@ -64,7 +64,7 @@ st.markdown("""
 
     .dashboard-header {
         color: #00f2fe;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 900;
         letter-spacing: 2px;
         margin-top: 15px;
@@ -91,6 +91,16 @@ st.markdown("""
         border-radius: 10px !important;
         font-weight: bold !important;
     }
+
+    /* تثبيت الأعمدة الأولى (من Item-Size حتى diff) عند التمرير الأفقي */
+    div[data-testid="stDataFrame"] table th:nth-child(-n+7),
+    div[data-testid="stDataFrame"] table td:nth-child(-n+7) {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 2 !important;
+        background-color: #0f172a !important;
+        border-left: 2px solid #00f2fe !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -108,7 +118,7 @@ st.markdown("""
 # 4. رفع الملف
 uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# دالة التوزيع التلقائي للعجز
+# دالة إعادة توزيع العجز لكود محدد
 def auto_rebalance_row(row, branch_cols, max_allowed):
     current_total = sum(row[b] for b in branch_cols)
     if current_total <= max_allowed or current_total == 0:
@@ -129,7 +139,7 @@ def auto_rebalance_row(row, branch_cols, max_allowed):
 
 if uploaded_file is not None:
     try:
-        # قراءة الشيت الأساسي والستوك عند التحميل لأول مرة
+        # قراءة البيانات وإعداد الجلسة
         if 'df_main' not in st.session_state or st.session_state.get('uploaded_file_name') != uploaded_file.name:
             xls = pd.ExcelFile(uploaded_file)
             sheet_names = xls.sheet_names
@@ -201,51 +211,64 @@ if uploaded_file is not None:
 
         st.markdown("---")
 
-        # إدارة العجز والبحث
-        st.markdown("<div class='dashboard-header'><span class='led-dot led-red'></span> إدارة الأكواد التي بها عجز</div>", unsafe_allow_html=True)
+        # أدوات التصفية والبحث
+        st.markdown("<div class='dashboard-header'><span class='led-dot led-blue'></span> عرض البيانات وإدارة التوزيع</div>", unsafe_allow_html=True)
+
+        view_option = st.radio("خيارات عرض الجدول:", ["الشيت كامل", "العجز فقط"], horizontal=True)
 
         col_search, col_btn = st.columns([3, 2])
         with col_search:
             search_query = st.text_input("🔍 البحث برقم الكود (Item أو Item-Size):", "").strip()
+
+        # تصفية الشيت بحسب الفلتر
+        if view_option == "العجز فقط":
+            df_filtered = df_work[df_work['diff'] < 0].copy()
+        else:
+            df_filtered = df_work.copy()
+
+        # تطبيق البحث إن وجد
+        if search_query:
+            df_display = df_filtered[
+                df_filtered['Item-Size'].str.contains(search_query, case=False, na=False) | 
+                df_filtered['Item'].str.contains(search_query, case=False, na=False)
+            ]
+        else:
+            df_display = df_filtered
+
         with col_btn:
             st.write(" ")
             st.write(" ")
-            if st.button("⚡ تسوية العجز أوتوماتيكياً لجميع الفروع"):
-                shortage_indices = df_work[df_work['diff'] < 0].index
-                for idx in shortage_indices:
-                    row = df_work.loc[idx]
-                    updated_row = auto_rebalance_row(row, branch_cols, row['stock'])
-                    df_work.loc[idx] = updated_row
-                
-                df_work['qty'] = df_work[branch_cols].sum(axis=1)
-                df_work['diff'] = df_work['stock'] - df_work['qty']
-                st.session_state.df_main = df_work
-                st.success("تمت التسويه الأوتوماتيكية بنجاح!")
-                st.rerun()
-
-        # تصفية جدول العجز + تطبيق البحث إن وجد
-        df_shortage = df_work[df_work['diff'] < 0].copy()
-
-        if search_query:
-            df_shortage = df_shortage[
-                df_shortage['Item-Size'].str.contains(search_query, case=False, na=False) | 
-                df_shortage['Item'].str.contains(search_query, case=False, na=False)
-            ]
+            if st.button("⚡ تسوية الكمية للكود المبحوث عنه فقط"):
+                if search_query and len(df_display) > 0:
+                    shortage_rows = df_display[df_display['diff'] < 0]
+                    if len(shortage_rows) > 0:
+                        for idx in shortage_rows.index:
+                            row = df_work.loc[idx]
+                            updated_row = auto_rebalance_row(row, branch_cols, row['stock'])
+                            df_work.loc[idx] = updated_row
+                        
+                        df_work['qty'] = df_work[branch_cols].sum(axis=1)
+                        df_work['diff'] = df_work['stock'] - df_work['qty']
+                        st.session_state.df_main = df_work
+                        st.success(f"تمت تسوية الكمية للكود ({search_query}) بنجاح!")
+                        st.rerun()
+                    else:
+                        st.info("الكود المبحوث عنه لا يحتوي على عجز لتسويته.")
+                else:
+                    st.warning("يرجى كتابة رقم الكود في خانة البحث أولاً لتنفيذ التسوية الخاصة به!")
 
         display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['دفعة اولى']
 
-        st.write("👇 **قم بتعديل الكميات مباشرة داخل الجدول وتسمع المعادلة لحظياً:**")
-        
-        # عرض الجدول القابل للتعديل
+        # عرض الجدول القابل للتعديل المباشر
         edited_df = st.data_editor(
-            df_shortage[display_cols],
-            key="editor_shortage",
+            df_display[display_cols],
+            key="main_editor",
             use_container_width=True,
-            height=380,
+            height=420,
             disabled=['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff']
         )
 
-        # التحديث اللحظي المباشر لمجموع القطع والفرق بمجرد تغيير القيم
+        # التحديث اللحظي للقيم والمعادلات بمجرد تعديل أرقام الفروع
         has_changed = False
         for idx in edited_df.index:
             for b in branch_cols + ['دفعة اولى']:
@@ -254,15 +277,14 @@ if uploaded_file is not None:
                     has_changed = True
 
         if has_changed:
-            # إعادة حساب المجموع والفرق تلقائياً
             st.session_state.df_main['qty'] = st.session_state.df_main[branch_cols].sum(axis=1)
             st.session_state.df_main['diff'] = st.session_state.df_main['stock'] - st.session_state.df_main['qty']
             st.rerun()
 
         st.markdown("---")
 
-        # تصدير الملفات وإضافة معادلات Excel الحقيقية
-        st.markdown("<div class='dashboard-header'><span class='led-dot led-green'></span> تصدير الملفات النهائية والمعادلات</div>", unsafe_allow_html=True)
+        # تصدير الملفات مع حفظ معادلات Excel الحقيقية
+        st.markdown("<div class='dashboard-header'><span class='led-dot led-green'></span> تصدير الشيت النهائي بعد التعديلات والتجميع</div>", unsafe_allow_html=True)
 
         def make_excel_with_formulas(df_to_export):
             output = io.BytesIO()
@@ -278,7 +300,6 @@ if uploaded_file is not None:
                 first_b_letter = openpyxl.utils.get_column_letter(df_to_export.columns.get_loc(branch_cols[0]) + 1)
                 last_b_letter = openpyxl.utils.get_column_letter(df_to_export.columns.get_loc(branch_cols[-1]) + 1)
 
-                # كتابة معادلة SUM و الفرق في كل صف داخل الإكسيل
                 for row_idx in range(2, len(df_to_export) + 2):
                     worksheet[f'{qty_col_letter}{row_idx}'] = f"=SUM({first_b_letter}{row_idx}:{last_b_letter}{row_idx})"
                     worksheet[f'{diff_col_letter}{row_idx}'] = f"={stock_col_letter}{row_idx}-{qty_col_letter}{row_idx}"
@@ -288,17 +309,17 @@ if uploaded_file is not None:
         c_exp1, c_exp2 = st.columns(2)
         with c_exp1:
             st.download_button(
-                label="📥 تحميل كشف أصناف العجز فقط (Excel مع المعادلات)",
+                label="📥 تحميل كشف أصناف العجز فقط بعد التعديل (Excel مع المعادلات)",
                 data=make_excel_with_formulas(st.session_state.df_main[st.session_state.df_main['diff'] < 0][display_cols]),
-                file_name="كشف_العجز_فقط.xlsx",
+                file_name="كشف_العجز_بعد_التعديل.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
         with c_exp2:
             st.download_button(
-                label="📥 تحميل كشف التحضير النهائي الكامل (Excel مع المعادلات)",
+                label="📥 تحميل كشف التوزيع الكامل بعد التعديل (Excel مع المعادلات)",
                 data=make_excel_with_formulas(st.session_state.df_main[display_cols]),
-                file_name="الخطه_النهائيه_بعد_التسويه.xlsx",
+                file_name="الخطه_النهائيه_الكامله.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
