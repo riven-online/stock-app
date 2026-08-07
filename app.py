@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import io
 import openpyxl
-import sqlite3
-import os
 
 # 1. إعدادات الصفحة
 st.set_page_config(
@@ -99,52 +97,20 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# إدارة التخزين الدائم
-DB_FILE = "riven_saved_data.db"
-
-def save_to_db(df, branch_cols, file_name):
-    conn = sqlite3.connect(DB_FILE)
-    df.to_sql("data_table", conn, if_exists="replace", index=False)
-    meta_df = pd.DataFrame({"file_name": [file_name], "branch_cols": [",".join(branch_cols)]})
-    meta_df.to_sql("metadata", conn, if_exists="replace", index=False)
-    conn.close()
-
-def load_from_db():
-    if not os.path.exists(DB_FILE): return None, None, None
-    try:
-        conn = sqlite3.connect(DB_FILE)
-        df = pd.read_sql("SELECT * FROM data_table", conn)
-        meta_df = pd.read_sql("SELECT * FROM metadata", conn)
-        conn.close()
-        return df, meta_df["branch_cols"].iloc[0].split(","), meta_df["file_name"].iloc[0]
-    except: return None, None, None
-
-def clear_db():
-    if os.path.exists(DB_FILE): os.remove(DB_FILE)
+def clear_session():
     st.session_state.clear()
     st.rerun()
 
-# استرجاع البيانات المحفوظة
+# شاشة رفع الملف לבدء العمل
 if 'df_main' not in st.session_state:
-    saved_df, saved_branches, saved_filename = load_from_db()
-    if saved_df is not None:
-        saved_df = saved_df.reset_index(drop=True)
-        if 'دفعة اولى' in saved_df.columns:
-            saved_df.rename(columns={'دفعة اولى': 'Batch'}, inplace=True)
-        st.session_state.df_main = saved_df
-        st.session_state.branch_cols = saved_branches
-        st.session_state.uploaded_file_name = saved_filename
-
-# شاشة رفع الملف لبدء العمل
-if 'df_main' not in st.session_state:
-    st.info("📂 قم برفع ملف Excel لبدء العمل. سيتم حفظ التعديلات تلقائياً ولن تضيع البيانات.")
+    st.info("📂 قم برفع ملف Excel لبدء العمل. ستبقى بياناتك محفوظة في الجلسة حتى تنهي تعديلاتك وتحمل الملف.")
     uploaded_file = st.file_uploader("", type=["xlsx"])
     if uploaded_file:
         try:
             xls = pd.ExcelFile(uploaded_file)
             df_prep = pd.read_excel(uploaded_file, sheet_name=xls.sheet_names[0])
             
-            # تنظيف الفهرس وإزالة الأعمدة المكررة
+            # تنظيف الفهرس والأعمدة المكررة
             df_prep = df_prep.loc[:, ~df_prep.columns.duplicated()].reset_index(drop=True)
             
             if 'دفعة اولى' in df_prep.columns:
@@ -173,17 +139,18 @@ if 'df_main' not in st.session_state:
             st.session_state.df_main = df_prep
             st.session_state.branch_cols = branch_cols
             st.session_state.uploaded_file_name = uploaded_file.name
-            save_to_db(df_prep, branch_cols, uploaded_file.name)
             st.rerun()
-        except Exception as e: st.error(f"حدث خطأ أثناء تحميل الملف: {e}")
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء تحميل الملف: {e}")
 
 else:
     # الشريط العلوي
     col1, col2 = st.columns([5, 1])
     with col1: 
-        st.success(f"💾 **الملف النشط:** {st.session_state.get('uploaded_file_name')}")
+        st.success(f"💾 **الملف النشط في الجلسة:** {st.session_state.get('uploaded_file_name')}")
     with col2: 
-        if st.button("🗑️ حذف الشيت"): clear_db()
+        if st.button("🗑️ إغلاق الشيت الحالي"):
+            clear_session()
 
     df_work = st.session_state.df_main
     branch_cols = st.session_state.branch_cols
@@ -240,9 +207,9 @@ else:
                 return (search_code in item_val) or (search_code in item_size_val)
 
         mask = df_filtered.apply(match_precise, axis=1)
-        df_display = df_filtered[mask]
+        df_display = df_filtered[mask].copy()
     else:
-        df_display = df_filtered
+        df_display = df_filtered.copy()
 
     raw_display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['Batch']
     display_cols = list(dict.fromkeys([c for c in raw_display_cols if c in df_display.columns]))
@@ -258,9 +225,10 @@ else:
         )
     }
 
-    df_editor_data = df_display[display_cols].loc[:, ~df_display[display_cols].columns.duplicated()]
+    df_editor_data = df_display[display_cols]
     disabled_cols = [c for c in ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] if c in df_editor_data.columns]
 
+    # عرض جدول التعديل المباشر
     edited_df = st.data_editor(
         df_editor_data,
         key="editor_grid",
@@ -271,33 +239,22 @@ else:
         num_rows="fixed"
     )
 
-    # حفظ التعديلات بأمان تام وتفادي أخطاء pandas
-    has_changed = False
+    # تحديث البيانات مباشرة في st.session_state بأمان تام
     for idx in edited_df.index:
         for col in branch_cols + ['Batch']:
             if col in edited_df.columns:
-                val = edited_df.at[idx, col]
-                old_val = st.session_state.df_main.at[idx, col]
-                
-                # إهمال المقارنة إذا كانت القيمتان فارغتين
-                if pd.isna(val) and pd.isna(old_val):
-                    continue
-                
-                if val != old_val:
-                    st.session_state.df_main.at[idx, col] = val
-                    has_changed = True
+                new_val = edited_df.at[idx, col]
+                st.session_state.df_main.at[idx, col] = new_val
 
-    if has_changed:
-        for b in branch_cols:
-            st.session_state.df_main[b] = pd.to_numeric(st.session_state.df_main[b], errors='coerce')
-        st.session_state.df_main['qty'] = st.session_state.df_main[branch_cols].sum(axis=1)
-        st.session_state.df_main['diff'] = st.session_state.df_main['stock'] - st.session_state.df_main['qty']
-        save_to_db(st.session_state.df_main, branch_cols, st.session_state.uploaded_file_name)
-        st.rerun()
+    # إعادة إحصاء المجموع والعجز تلقائياً للأرقام
+    for b in branch_cols:
+        st.session_state.df_main[b] = pd.to_numeric(st.session_state.df_main[b], errors='coerce')
+    st.session_state.df_main['qty'] = st.session_state.df_main[branch_cols].sum(axis=1)
+    st.session_state.df_main['diff'] = st.session_state.df_main['stock'] - st.session_state.df_main['qty']
 
     st.markdown("---")
 
-    # دالة إعداد ملف Excel للتنزيل
+    # دالة إعداد ملف Excel للتنزيل مع المعادلات
     def generate_excel_bytes(df_to_export):
         output = io.BytesIO()
         export_df = df_to_export.copy()
@@ -320,14 +277,14 @@ else:
         output.seek(0)
         return output.getvalue()
 
-    # قسم التصدير بحسب الفلتر الحالي
-    st.markdown("### 📥 تصدير البيانات حسب الوضع والفلترة الحالية للموقع")
+    # قسم التصدير بحسب الوضع والفلتر الحالي
+    st.markdown("### 📥 تصدير البيانات الشيت المعدل")
     
     file_label = f"Riven_{view_option}_Filtered.xlsx"
     excel_data = generate_excel_bytes(df_display[display_cols])
 
     st.download_button(
-        label=f"📥 تحميل الشيت المفلتر حالياً على الموقع ({len(df_display)} صنف)",
+        label=f"📥 تحميل الشيت المعدل والمفلتر حالياً ({len(df_display)} صنف)",
         data=excel_data,
         file_name=file_label,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
