@@ -8,7 +8,91 @@ from openpyxl.utils import get_column_letter
 import io
 import plotly.express as px
 
-st.set_page_config(page_title="نظام معالجة وإدارة خطط الأونلاين", layout="wide")
+# ضبط إعدادات الصفحة
+st.set_page_config(
+    page_title="RIVEN AI - Futuristic Plan & Stock Engine",
+    page_icon="⚡",
+    layout="wide"
+)
+
+# --- تصميم واجهة مستقبلي مع تأثيرات النيون (Futuristic Cyberpunk CSS) ---
+st.markdown("""
+<style>
+    /* الخلفية والنصوص الأساسية */
+    .stApp {
+        background-color: #0a0e17;
+        color: #e0e6ed;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* عنوان النيون الرئيسي */
+    .neon-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        text-align: center;
+        color: #00f3ff;
+        text-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff, 0 0 40px #0077ff;
+        margin-bottom: 5px;
+        letter-spacing: 2px;
+    }
+    
+    .neon-subtitle {
+        text-align: center;
+        color: #ff007f;
+        font-size: 1.2rem;
+        text-shadow: 0 0 8px #ff007f;
+        margin-bottom: 30px;
+    }
+
+    /* كروت الإحصائيات المستقبلية */
+    div[data-testid="stMetric"] {
+        background: rgba(16, 25, 44, 0.75);
+        border: 1px solid #00f3ff;
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        border-radius: 12px;
+        padding: 15px;
+        transition: all 0.3s ease-in-out;
+    }
+    div[data-testid="stMetric"]:hover {
+        box-shadow: 0 0 25px rgba(0, 243, 255, 0.6);
+        transform: translateY(-3px);
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #8b9bb4 !important;
+        font-weight: 600;
+    }
+    div[data-testid="stMetricValue"] {
+        color: #00f3ff !important;
+        text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    }
+
+    /* أزرار التشغيل والتحميل النيون */
+    .stButton>button {
+        width: 100%;
+        background: linear-gradient(135deg, #00f3ff 0%, #ff007f 100%) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        box-shadow: 0 0 15px rgba(255, 0, 127, 0.4) !important;
+        transition: all 0.3s ease !important;
+    }
+    .stButton>button:hover {
+        box-shadow: 0 0 30px rgba(0, 243, 255, 0.8) !important;
+        transform: scale(1.02);
+    }
+
+    /* تنضيد الملاحظات */
+    .stAlert {
+        background-color: rgba(0, 243, 255, 0.05);
+        border: 1px solid #00f3ff;
+        color: #00f3ff;
+    }
+</style>
+""", unsafe_allow_capacity=True)
+
 
 def process_plan_and_stock(uploaded_file):
     xls = pd.ExcelFile(uploaded_file)
@@ -25,7 +109,7 @@ def process_plan_and_stock(uploaded_file):
             stock_sheet = sheet
 
     if not plan_sheet or not stock_sheet:
-        st.error("تعذر التعرف التلقائي على شيت الخطة وشيت الاستوك. يرجى التأكد من المسميات.")
+        st.error("❌ تعذر التعرف التلقائي على شيت الخطة وشيت الاستوك. يرجى التأكد من المسميات.")
         return None, None, None
 
     df_plan = pd.read_excel(uploaded_file, sheet_name=plan_sheet)
@@ -38,21 +122,25 @@ def process_plan_and_stock(uploaded_file):
     ws_plan.title = 'Reallocation_Plan'
     ws_plan.views.sheetView[0].showGridLines = True
 
-    # 2. ورقة الاستوك
+    # 2. ورقة الاستوك الأساسية
     ws_stock = wb.create_sheet(title='ستوك')
     ws_stock.views.sheetView[0].showGridLines = True
-
     ws_stock.append(['Product/Barcode', 'Quantity'])
     for row in df_stock.itertuples(index=False):
         ws_stock.append([row[0], row[1]])
 
+    # 3. ورقة الاستوك النهائي (الجديدة للترحيل للبلان القادمة)
+    ws_final_stock = wb.create_sheet(title='الاستوك النهائي')
+    ws_final_stock.views.sheetView[0].showGridLines = True
+    ws_final_stock.append(['Product/Barcode', 'Final_Quantity'])
+
     store_cols = df_plan.columns[3:].tolist()
     
-    # ترتيب الأعمدة الجديد والمطور
+    # بناء الأعمدة المحدثة بدقة
     new_headers = (
         ['Item-Size', 'Item', 'Size'] 
         + store_cols 
-        + ['إجمالي الخطة', 'رصيد الاستوك', 'تم تجهيز الخطة', 'الفرق / العجز', 'حالة التغطية', 'ملاحظات الدفعات']
+        + ['إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية', 'ملاحظات الدفعات']
     )
     ws_plan.append(new_headers)
 
@@ -67,8 +155,8 @@ def process_plan_and_stock(uploaded_file):
 
     num_rows = len(df_plan)
     
-    # كتابة الصفوف والمعادلات التفاعلية
-    # AN = إجمالي الخطة | AO = رصيد الاستوك | AP = تم تجهيز الخطة | AQ = الفرق/العجز | AR = حالة التغطية | AS = ملاحظات الدفعات
+    # حقن الصفوف والمعادلات التفاعلية
+    # AN = إجمالي الخطة | AO = رصيد الاستوك | AP = تجهيز الخطة | AQ = رصيد الاستوك النهائي | AR = العجز | AS = حالة التغطية | AT = ملاحظات الدفعات
     for idx, row in enumerate(df_plan.itertuples(index=False), start=2):
         item_size = row[0]
         item = row[1]
@@ -77,27 +165,35 @@ def process_plan_and_stock(uploaded_file):
         
         total_plan_fmt = f"=SUM(D{idx}:AM{idx})"
         stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
-        prepped_qty = 0  # قيمة افتراضية لإدخال الكمية المجهزة
-        variance_fmt = f'=AO{idx}-AP{idx}'
+        prepped_qty = 0  # قيمة خليه تجهيز الخطة المبدئية
+        
+        # معادلة رصيد الاستوك النهائي (الموجبة فقط)
+        final_stock_fmt = f'=MAX(0, AO{idx}-AP{idx})'
+        
+        # معادلة العجز الحقيقي فقط
+        deficit_fmt = f'=IF(AN{idx}>AO{idx}, AN{idx}-AO{idx}, 0)'
         
         # معادلة حالة التغطية المحدثة
         coverage_fmt = (
-            f'=IF(AQ{idx}>0, "مكتمل بالكامل + فائض مخزون", '
-            f'IF(AQ{idx}=0, "مكتمل بالكامل", '
+            f'=IF(AQ{idx}>AN{idx}, "مكتمل بالكامل + فائض مخزون", '
+            f'IF(AQ{idx}=AN{idx}, "مكتمل بالكامل", '
             f'IF(AO{idx}>0, "تغطية جزئية", "عجز كامل")))'
         )
         
-        row_data = [item_size, item, size] + store_vals + [total_plan_fmt, stock_qty_fmt, prepped_qty, variance_fmt, coverage_fmt, ""]
+        row_data = [item_size, item, size] + store_vals + [total_plan_fmt, stock_qty_fmt, prepped_qty, final_stock_fmt, deficit_fmt, coverage_fmt, ""]
         ws_plan.append(row_data)
 
-    # إضافة القائمة المنسدلة لعمود ملاحظات الدفعات (Col AS)
+        # ربط الشيت الثالث (الاستوك النهائي) بالمعادلة أوتوماتيكياً
+        ws_final_stock.append([item_size, f"=Reallocation_Plan!AQ{idx}"])
+
+    # القائمة المنسدلة لعمود ملاحظات الدفعات (Col AT)
     dv = DataValidation(type="list", formula1='"دفعة 1, دفعة 2, دفعة 3, جاري التجهيز, مؤجل, تم الشحن"', allow_blank=True)
     ws_plan.add_data_validation(dv)
-    dv.add(f"AS2:AS{num_rows + 1}")
+    dv.add(f"AT2:AT{num_rows + 1}")
 
-    # التنسيق الشرطي والتظليل
-    yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') # أصفر خفيف للأصناف المتاحة
-    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    # أحمر خفيف للعجز
+    # التنسيقات الشرطية
+    yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') 
+    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    
 
     ws_plan.conditional_formatting.add(
         f"AO2:AO{num_rows + 1}",
@@ -105,8 +201,8 @@ def process_plan_and_stock(uploaded_file):
     )
 
     ws_plan.conditional_formatting.add(
-        f"AQ2:AQ{num_rows + 1}",
-        CellIsRule(operator='lessThan', formula=['0'], stopIfTrue=False, fill=red_fill)
+        f"AR2:AR{num_rows + 1}",
+        CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=red_fill)
     )
 
     for col in ws_plan.columns:
@@ -120,93 +216,109 @@ def process_plan_and_stock(uploaded_file):
     
     return output, df_plan, df_stock
 
-# --- واجهة المستخدم والداشبورد (Streamlit Dashboard UI) ---
 
-st.title("⚡ المنظومة الذكية لإدارة ومعالجة خطط الأونلاين")
-st.markdown("معالجة الحسابات والدفعات | الربط مع الاستوك | داشبورد فحص وتصفية الحالات")
+# --- الواجهة الرئيسية (Main Console UI) ---
 
-uploaded_file = st.file_uploader("قم برفع ملف Excel (يحتوي على ورقتي الخطة والاستوك)", type=['xlsx'])
+st.markdown("<h1 class='neon-title'>⚡ RIVEN AI ANALYTICS ENGINE</h1>", unsafe_allow_html=True)
+st.markdown("<p class='neon-subtitle'>نظام معالجة وتوليد خطط التوزيع والتعدين المخزني الذكي</p>", unsafe_allow_html=True)
+
+uploaded_file = st.file_uploader("📥 قم برفع ملف الخطة والاستوك (xlsx)", type=['xlsx'])
 
 if uploaded_file is not None:
-    if st.button("🚀 معالجة وبناء الخطة"):
-        with st.spinner("جاري المعالجة وحقن المعادلات وتحديث الحالات..."):
+    if st.button("🛸 بدء التحليل البرمجي وتوليد الخطة الخارقة"):
+        with st.spinner("جاري قراءة البيانات، معالجة المعادلات الذكية، وتجهيز الداشبورد..."):
             excel_out, df_plan, df_stock = process_plan_and_stock(uploaded_file)
-            
             if excel_out:
                 st.session_state['excel_out'] = excel_out
                 st.session_state['df_plan'] = df_plan
                 st.session_state['df_stock'] = df_stock
-                st.success("تمت معالجة البيانات وبناء الشيت بنجاح!")
+                st.success("✨ تم معالجة البيانات بنجاح وبناء محرك التحليل والترحيل الذكي!")
 
 if 'excel_out' in st.session_state:
     st.divider()
     
-    # زر تنزيل الملف النهائي
-    st.download_button(
-        label="📥 تحميل شيت الخطة المطور والإكسيل التفاعلي",
-        data=st.session_state['excel_out'],
-        file_name="Plan_Online_Processed_Final.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    # 1. لوحة التحميل الممتازة
+    col_dl, col_blank = st.columns([1, 2])
+    with col_dl:
+        st.download_button(
+            label="💾 تصدير شيت الخطة والمخزون النهائي (Excel)",
+            data=st.session_state['excel_out'],
+            file_name="Riven_Plan_Master_Processed.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
-    st.subheader("📊 داشبورد متابعة أداء الخطة والاستوك (System Overview)")
+    # 2. الداشبورد التفاعلية الشاملة
+    st.markdown("<h2 style='color:#00f3ff; text-shadow:0 0 10px #00f3ff;'>🌐 مركز المراقبة والتحليل الشامل (Control Console)</h2>", unsafe_allow_html=True)
     
     df_plan = st.session_state['df_plan']
     df_stock = st.session_state['df_stock']
     
-    # دمج البيانات للحسابات السريعة
     stock_map = dict(zip(df_stock.iloc[:, 0], df_stock.iloc[:, 1]))
-    
     store_cols = df_plan.columns[3:]
+    
     df_calc = df_plan.copy()
     df_calc['إجمالي الخطة'] = df_calc[store_cols].sum(axis=1)
     df_calc['رصيد الاستوك'] = df_calc['Item-Size'].map(stock_map).fillna(0)
-    df_calc['تم تجهيز الخطة'] = 0
-    df_calc['الفرق / العجز'] = df_calc['رصيد الاستوك'] - df_calc['تم تجهيز الخطة']
+    df_calc['تجهيز الخطة'] = 0
+    df_calc['رصيد الاستوك النهائي'] = (df_calc['رصيد الاستوك'] - df_calc['تجهيز الخطة']).clip(lower=0)
+    df_calc['العجز'] = (df_calc['إجمالي الخطة'] - df_calc['رصيد الاستوك']).apply(lambda x: x if x > 0 else 0)
 
     def assign_status(row):
-        diff = row['الفرق / العجز']
-        stock = row['رصيد الاستوك']
-        if diff > 0:
+        stock_fin = row['رصيد الاستوك النهائي']
+        plan = row['إجمالي الخطة']
+        stock_init = row['رصيد الاستوك']
+        if stock_fin > plan:
             return "مكتمل بالكامل + فائض مخزون"
-        elif diff == 0:
+        elif stock_fin == plan and plan > 0:
             return "مكتمل بالكامل"
-        elif stock > 0:
+        elif stock_init > 0:
             return "تغطية جزئية"
         else:
             return "عجز كامل"
 
     df_calc['حالة التغطية'] = df_calc.apply(assign_status, axis=1)
 
-    # عرض كروت الأرقام التجميعية (KPI Metrics)
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("إجمالي مطلوب الخطة", f"{int(df_calc['إجمالي الخطة'].sum()):,} قطعة")
-    col2.metric("إجمالي الاستوك المتاح", f"{int(df_calc['رصيد الاستوك'].sum()):,} قطعة")
-    col3.metric("تم تجهيزه", f"{int(df_calc['تم تجهيز الخطة'].sum()):,} قطعة")
-    col4.metric("إجمالي الفائض / العجز", f"{int(df_calc['الفرق / العجز'].sum()):,} قطعة")
+    # كروت المؤشرات الكلية (Top Metrics)
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric("📦 إجمالي المطلوب", f"{int(df_calc['إجمالي الخطة'].sum()):,}")
+    m2.metric("🏬 الاستوك المتاح", f"{int(df_calc['رصيد الاستوك'].sum()):,}")
+    m3.metric("⚙️ تم التجهيز", f"{int(df_calc['تجهيز الخطة'].sum()):,}")
+    m4.metric("🔋 الاستوك النهائي", f"{int(df_calc['رصيد الاستوك النهائي'].sum()):,}")
+    m5.metric("🚨 إجمالي العجز", f"{int(df_calc['العجز'].sum()):,}")
 
-    # رسم بياني تفاعلي احترافي من Plotly
-    st.subheader("📈 توزيع الأصناف حسب حالة التغطية")
-    status_counts = df_calc['حالة التغطية'].value_counts().reset_index()
-    status_counts.columns = ['حالة التغطية', 'العدد']
+    st.markdown("---")
+
+    # تحليل الفروع والمقاسات بالكامل
+    c_chart1, c_chart2 = st.columns(2)
     
-    fig = px.pie(status_counts, values='العدد', names='حالة التغطية', title="نسب توزيع حالات التغطية للأصناف", hole=0.4)
-    st.plotly_chart(fig, use_container_width=True)
+    with c_chart1:
+        st.markdown("<h4 style='color:#ff007f;'>📊 توزيع الفروع الأكثر طلباً</h4>", unsafe_allow_html=True)
+        store_sums = df_plan[store_cols].sum().sort_values(ascending=False).head(10).reset_index()
+        store_sums.columns = ['الفرع', 'الكمية المطلوبة']
+        fig_stores = px.bar(store_sums, x='الفرع', y='الكمية المطلوبة', color='الكمية المطلوبة',
+                            color_continuous_scale='Electric', template='plotly_dark')
+        st.plotly_chart(fig_stores, use_container_width=True)
 
-    # نظام الفلترة والعرض
-    st.subheader("🔍 عرض وتصفية الأصناف حسب الحالة")
+    with c_chart2:
+        st.markdown("<h4 style='color:#00f3ff;'>⭕ نسب تغطية الأصناف والحالات</h4>", unsafe_allow_html=True)
+        status_counts = df_calc['حالة التغطية'].value_counts().reset_index()
+        status_counts.columns = ['الحالة', 'العدد']
+        fig_pie = px.pie(status_counts, values='العدد', names='الحالة', hole=0.4,
+                         color_discrete_sequence=px.colors.sequential.Cyan, template='plotly_dark')
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    # نظام التصفية والفلترة الذكي
+    st.markdown("<h3 style='color:#00f3ff;'>🔍 الفحص الدقيق والفلترة التفاعلية</h3>", unsafe_allow_html=True)
     
     selected_status = st.selectbox(
-        "اختر حالة التغطية لعرض الأصناف الخاصة بها فقط:",
-        options=["الكل"] + list(df_calc['حالة التغطية'].unique())
+        "تصفية الجدول حسب حالة التغطية المخزنية:",
+        options=["عرض كافة الحالات"] + list(df_calc['حالة التغطية'].unique())
     )
 
-    if selected_status != "الكل":
+    if selected_status != "عرض كافة الحالات":
         filtered_df = df_calc[df_calc['حالة التغطية'] == selected_status]
     else:
         filtered_df = df_calc
 
-    st.write(f"عرض **{len(filtered_df)}** صنف متوافق مع التصفية:")
-    
-    display_cols = ['Item-Size', 'Item', 'Size', 'إجمالي الخطة', 'رصيد الاستوك', 'تم تجهيز الخطة', 'الفرق / العجز', 'حالة التغطية']
+    display_cols = ['Item-Size', 'Item', 'Size', 'إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية']
     st.dataframe(filtered_df[display_cols], use_container_width=True)
