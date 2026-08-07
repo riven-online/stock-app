@@ -107,7 +107,7 @@ def process_plan_and_stock(uploaded_file):
 
     wb = openpyxl.Workbook()
     
-    # 1. ورقة الخطة
+    # 1. ورقة الخطة الرئيسية
     ws_plan = wb.active
     ws_plan.title = 'Reallocation_Plan'
     ws_plan.views.sheetView[0].showGridLines = True
@@ -119,10 +119,15 @@ def process_plan_and_stock(uploaded_file):
     for row in df_stock.itertuples(index=False):
         ws_stock.append([row[0], row[1]])
 
-    # 3. ورقة الاستوك النهائي (للترحيل للبلان القادمة)
+    # 3. ورقة الاستوك النهائي
     ws_final_stock = wb.create_sheet(title='الاستوك النهائي')
     ws_final_stock.views.sheetView[0].showGridLines = True
-    ws_final_stock.append(['Product/Barcode', 'Final_Quantity'])
+    ws_final_stock.append(['Product/Barcode', 'Quantity'])
+
+    # 4. ورقة العجز المضافة حديثاً
+    ws_deficit = wb.create_sheet(title='العجز')
+    ws_deficit.views.sheetView[0].showGridLines = True
+    ws_deficit.append(['Product/Barcode', 'Quantity'])
 
     # استبعاد الأعمدة الزائدة
     store_cols = [c for c in df_plan.columns[3:] if not str(c).startswith('Unnamed')]
@@ -184,10 +189,8 @@ def process_plan_and_stock(uploaded_file):
         total_plan_fmt = f"=SUM(D{idx}:{col_last_store}{idx})"
         stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
         
-        # ترك خلية تجهيز الخطة فارغة (None) لعدم إظهار الصفر
-        prepped_qty = None 
+        prepped_qty = None # بدون أصفار
         
-        # استخدام دالة N() لضمان معالجة الخلية الفارغة كـ 0 في المعادلة الحسابية
         final_stock_fmt = f'=MAX(0, {col_stock_qty}{idx}-N({col_prep_qty}{idx}))'
         deficit_fmt = f'=IF({col_total_plan}{idx}>{col_stock_qty}{idx}, {col_total_plan}{idx}-{col_stock_qty}{idx}, 0)'
         
@@ -197,7 +200,6 @@ def process_plan_and_stock(uploaded_file):
             f'IF({col_stock_qty}{idx}>0, "تغطية جزئية", "عجز كامل")))'
         )
         
-        # ترك ملاحظات الدفعات فارغة تماماً مع بقاء القائمة المنسدلة مفعلة
         default_batch_note = None 
         
         row_data = [item_size, item, size] + store_vals + [
@@ -205,12 +207,16 @@ def process_plan_and_stock(uploaded_file):
         ]
         ws_plan.append(row_data)
 
+        # ربط ورقة الاستوك النهائي
         ws_final_stock.append([item_size, f"=Reallocation_Plan!{col_final_stock}{idx}"])
+        
+        # ربط ورقة العجز (تكتب قيمة العجز وإذا تم التسوية تظهر "تم التسوية")
+        ws_deficit.append([item_size, f'=IF(Reallocation_Plan!{col_deficit}{idx}>0, Reallocation_Plan!{col_deficit}{idx}, "تم التسوية")'])
 
     # تطبيق القائمة المنسدلة على نطاق عمود ملاحظات الدفعات
     dv.add(f"{col_batch_notes}2:{col_batch_notes}{num_rows + 1}")
 
-    # التنسيقات الشرطية (الأصفر الخفيف المخصص للاستوك المتاح)
+    # التنسيقات الشرطية
     soft_yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')
     red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')
 
@@ -224,10 +230,12 @@ def process_plan_and_stock(uploaded_file):
         CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=red_fill)
     )
 
-    for col in ws_plan.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col[:1])
-        col_letter = get_column_letter(col[0].column)
-        ws_plan.column_dimensions[col_letter].width = max(max_len + 3, 12)
+    # ضبط العرض للأوراق
+    for ws in [ws_plan, ws_stock, ws_final_stock, ws_deficit]:
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col[:1])
+            col_letter = get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
 
     output = io.BytesIO()
     wb.save(output)
@@ -245,13 +253,13 @@ uploaded_file = st.file_uploader("📥 قم برفع ملف الخطة والا�
 
 if uploaded_file is not None:
     if st.button("🛸 بدء التحليل البرمجي وتوليد الخطة"):
-        with st.spinner("جاري قراءة البيانات، معالجة القوائم المنسدلة، وتطوير شيت الأكسيل..."):
+        with st.spinner("جاري قراءة البيانات، إنشاء شيت العجز، وتطوير شيت الأكسيل..."):
             excel_out, df_plan, df_stock = process_plan_and_stock(uploaded_file)
             if excel_out:
                 st.session_state['excel_out'] = excel_out
                 st.session_state['df_plan'] = df_plan
                 st.session_state['df_stock'] = df_stock
-                st.success("✨ تم تحديث الملف وإخفاء الأصفار وتفريغ الملاحظات بنجاح!")
+                st.success("✨ تم إنشاء شيت العجز التلقائي وتحديث الملف بنجاح!")
 
 if 'excel_out' in st.session_state:
     st.divider()
