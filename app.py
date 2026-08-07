@@ -15,17 +15,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- تصميم واجهة مستقبلي مع تأثيرات النيون (Futuristic Cyberpunk CSS) ---
+# --- تصميم واجهة مستقبلي مع تأثيرات النيون ---
 st.markdown("""
 <style>
-    /* الخلفية والنصوص الأساسية */
     .stApp {
         background-color: #0a0e17;
         color: #e0e6ed;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    
-    /* عنوان النيون الرئيسي */
     .neon-title {
         font-size: 2.8rem;
         font-weight: 800;
@@ -35,7 +32,6 @@ st.markdown("""
         margin-bottom: 5px;
         letter-spacing: 2px;
     }
-    
     .neon-subtitle {
         text-align: center;
         color: #ff007f;
@@ -43,8 +39,6 @@ st.markdown("""
         text-shadow: 0 0 8px #ff007f;
         margin-bottom: 30px;
     }
-
-    /* كروت الإحصائيات المستقبلية */
     div[data-testid="stMetric"] {
         background: rgba(16, 25, 44, 0.75);
         border: 1px solid #00f3ff;
@@ -65,8 +59,6 @@ st.markdown("""
         color: #00f3ff !important;
         text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
     }
-
-    /* أزرار التشغيل والتحميل النيون */
     .stButton>button {
         width: 100%;
         background: linear-gradient(135deg, #00f3ff 0%, #ff007f 100%) !important;
@@ -83,8 +75,6 @@ st.markdown("""
         box-shadow: 0 0 30px rgba(0, 243, 255, 0.8) !important;
         transform: scale(1.02);
     }
-
-    /* تنضيد الملاحظات */
     .stAlert {
         background-color: rgba(0, 243, 255, 0.05);
         border: 1px solid #00f3ff;
@@ -129,33 +119,33 @@ def process_plan_and_stock(uploaded_file):
     for row in df_stock.itertuples(index=False):
         ws_stock.append([row[0], row[1]])
 
-    # 3. ورقة الاستوك النهائي (الجديدة للترحيل للبلان القادمة)
+    # 3. ورقة الاستوك النهائي (للترحيل للبلان القادمة)
     ws_final_stock = wb.create_sheet(title='الاستوك النهائي')
     ws_final_stock.views.sheetView[0].showGridLines = True
     ws_final_stock.append(['Product/Barcode', 'Final_Quantity'])
 
-    # استبعاد أي أعمدة زائدة غير مرغوبة إن وجدت
+    # استبعاد الأعمدة الزائدة
     store_cols = [c for c in df_plan.columns[3:] if not str(c).startswith('Unnamed')]
     
-    # بناء العناوين المحدثة بدون أعمدة زائدة
+    # مسميات الأعمدة الرئيسية
     new_headers = (
         ['Item-Size', 'Item', 'Size'] 
         + store_cols 
-        + ['إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية', 'ملاحظات الدفعة']
+        + ['إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية', 'ملاحظات الدفعات']
     )
     ws_plan.append(new_headers)
 
     # تحديد الحروف المرجعية للأعمدة ديناميكياً
-    last_store_col_idx = 3 + len(store_cols)  # عمود آخر فرع
+    last_store_col_idx = 3 + len(store_cols)
     col_last_store = get_column_letter(last_store_col_idx)
     
-    col_total_plan = get_column_letter(last_store_col_idx + 1)      # إجمالي الخطة
-    col_stock_qty = get_column_letter(last_store_col_idx + 2)        # رصيد الاستوك
-    col_prep_qty = get_column_letter(last_store_col_idx + 3)         # تجهيز الخطة
-    col_final_stock = get_column_letter(last_store_col_idx + 4)      # رصيد الاستوك النهائي
-    col_deficit = get_column_letter(last_store_col_idx + 5)          # العجز
-    col_coverage = get_column_letter(last_store_col_idx + 6)         # حالة التغطية
-    col_batch_notes = get_column_letter(last_store_col_idx + 7)       # ملاحظات الدفعة
+    col_total_plan = get_column_letter(last_store_col_idx + 1)
+    col_stock_qty = get_column_letter(last_store_col_idx + 2)
+    col_prep_qty = get_column_letter(last_store_col_idx + 3)
+    col_final_stock = get_column_letter(last_store_col_idx + 4)
+    col_deficit = get_column_letter(last_store_col_idx + 5)
+    col_coverage = get_column_letter(last_store_col_idx + 6)
+    col_batch_notes = get_column_letter(last_store_col_idx + 7)
 
     header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
     header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
@@ -168,11 +158,11 @@ def process_plan_and_stock(uploaded_file):
 
     num_rows = len(df_plan)
 
-    # إنشاء قائمة الاختيارات المنسدلة (Data Validation) لملاحظات الدفعة
+    # قائمة الاختيارات المنسدلة (Data Validation)
     options_list = [
         "دفعة 1", "دفعة 2", "دفعة 3", "دفعة 4", "دفعة 5", 
         "دفعة 6", "دفعة 7", "دفعة 8", "دفعة 9", "دفعة 10",
-        "مكتمل", "معلق", "مطلوب استكمال", "تحت التجهيز", "ملغى"
+        "جاري التجهيز", "مؤجل", "تم الشحن", "مكتمل", "معلق", "مطلوب استكمال", "ملغى"
     ]
     formula_options = f'"{",".join(options_list)}"'
     
@@ -180,11 +170,11 @@ def process_plan_and_stock(uploaded_file):
     dv.error ='عفواً، اختر قيمة من القائمة المنسدلة فقط'
     dv.errorTitle = 'إدخال غير صالح'
     dv.prompt = 'اختر الدفعة أو حالة التجهيز'
-    dv.promptTitle = 'ملاحظات الدفعة'
+    dv.promptTitle = 'ملاحظات الدفعات'
     
     ws_plan.add_data_validation(dv)
     
-    # حقن الصفوف والمعادلات التفاعلية
+    # كتابة الصفوف والمعادلات
     for idx, row in enumerate(df_plan.itertuples(index=False), start=2):
         item_size = row[0]
         item = row[1]
@@ -193,51 +183,47 @@ def process_plan_and_stock(uploaded_file):
         
         total_plan_fmt = f"=SUM(D{idx}:{col_last_store}{idx})"
         stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
-        prepped_qty = 0  # قيمة خلية تجهيز الخطة المبدئية
         
-        # معادلة رصيد الاستوك النهائي
-        final_stock_fmt = f'=MAX(0, {col_stock_qty}{idx}-{col_prep_qty}{idx})'
+        # ترك خلية تجهيز الخطة فارغة (None) لعدم إظهار الصفر
+        prepped_qty = None 
         
-        # معادلة العجز الحقيقي
+        # استخدام دالة N() لضمان معالجة الخلية الفارغة كـ 0 في المعادلة الحسابية
+        final_stock_fmt = f'=MAX(0, {col_stock_qty}{idx}-N({col_prep_qty}{idx}))'
         deficit_fmt = f'=IF({col_total_plan}{idx}>{col_stock_qty}{idx}, {col_total_plan}{idx}-{col_stock_qty}{idx}, 0)'
         
-        # معادلة حالة التغطية
         coverage_fmt = (
             f'=IF({col_final_stock}{idx}>{col_total_plan}{idx}, "مكتمل بالكامل + فائض مخزون", '
             f'IF({col_final_stock}{idx}={col_total_plan}{idx}, "مكتمل بالكامل", '
             f'IF({col_stock_qty}{idx}>0, "تغطية جزئية", "عجز كامل")))'
         )
         
-        default_batch_note = "دفعة 1"
+        # ترك ملاحظات الدفعات فارغة تماماً مع بقاء القائمة المنسدلة مفعلة
+        default_batch_note = None 
         
         row_data = [item_size, item, size] + store_vals + [
             total_plan_fmt, stock_qty_fmt, prepped_qty, final_stock_fmt, deficit_fmt, coverage_fmt, default_batch_note
         ]
         ws_plan.append(row_data)
 
-        # ربط شيت الاستوك النهائي تلقائياً
         ws_final_stock.append([item_size, f"=Reallocation_Plan!{col_final_stock}{idx}"])
 
-    # تطبيق القائمة المنسدلة على كل نطاق عمود ملاحظات الدفعة
+    # تطبيق القائمة المنسدلة على نطاق عمود ملاحظات الدفعات
     dv.add(f"{col_batch_notes}2:{col_batch_notes}{num_rows + 1}")
 
-    # التنسيقات الشرطية
-    soft_yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') # أصفر خفيف تمييز المخزون المتاح
-    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')          # أحمر خفيف للعجز
+    # التنسيقات الشرطية (الأصفر الخفيف المخصص للاستوك المتاح)
+    soft_yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')
+    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')
 
-    # تطبيق التظليل الأصفر الخفيف حصرياً على عمود "رصيد الاستوك" المتاح (> 0)
     ws_plan.conditional_formatting.add(
         f"{col_stock_qty}2:{col_stock_qty}{num_rows + 1}",
         CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=soft_yellow_fill)
     )
 
-    # التنسيق الشرطي للعجز
     ws_plan.conditional_formatting.add(
         f"{col_deficit}2:{col_deficit}{num_rows + 1}",
         CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=red_fill)
     )
 
-    # ضبط أبعاد الأعمدة تلقائياً
     for col in ws_plan.columns:
         max_len = max(len(str(cell.value or '')) for cell in col[:1])
         col_letter = get_column_letter(col[0].column)
@@ -250,7 +236,7 @@ def process_plan_and_stock(uploaded_file):
     return output, df_plan, df_stock
 
 
-# --- الواجهة الرئيسية (Main Console UI) ---
+# --- الواجهة الرئيسية ---
 
 st.markdown("<h1 class='neon-title'>⚡ RIVEN AI ANALYTICS ENGINE</h1>", unsafe_allow_html=True)
 st.markdown("<p class='neon-subtitle'>نظام معالجة وتوليد خطط التوزيع</p>", unsafe_allow_html=True)
@@ -265,7 +251,7 @@ if uploaded_file is not None:
                 st.session_state['excel_out'] = excel_out
                 st.session_state['df_plan'] = df_plan
                 st.session_state['df_stock'] = df_stock
-                st.success("✨ تم تحديث الملف وإضافة القائمة المنسدلة وضبط الألوان بنجاح!")
+                st.success("✨ تم تحديث الملف وإخفاء الأصفار وتفريغ الملاحظات بنجاح!")
 
 if 'excel_out' in st.session_state:
     st.divider()
