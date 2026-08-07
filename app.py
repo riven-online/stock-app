@@ -3,6 +3,7 @@ import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.formatting.rule import CellIsRule
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
 import io
 import plotly.express as px
@@ -133,13 +134,14 @@ def process_plan_and_stock(uploaded_file):
     ws_final_stock.views.sheetView[0].showGridLines = True
     ws_final_stock.append(['Product/Barcode', 'Final_Quantity'])
 
-    store_cols = df_plan.columns[3:].tolist()
+    # استبعاد أي أعمدة زائدة غير مرغوبة إن وجدت
+    store_cols = [c for c in df_plan.columns[3:] if not str(c).startswith('Unnamed')]
     
-    # بناء الأعمدة المحدثة بدقة بدون عمود ملاحظات الدفعات
+    # بناء العناوين المحدثة بدون أعمدة زائدة
     new_headers = (
         ['Item-Size', 'Item', 'Size'] 
         + store_cols 
-        + ['إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية']
+        + ['إجمالي الخطة', 'رصيد الاستوك', 'تجهيز الخطة', 'رصيد الاستوك النهائي', 'العجز', 'حالة التغطية', 'ملاحظات الدفعة']
     )
     ws_plan.append(new_headers)
 
@@ -153,6 +155,7 @@ def process_plan_and_stock(uploaded_file):
     col_final_stock = get_column_letter(last_store_col_idx + 4)      # رصيد الاستوك النهائي
     col_deficit = get_column_letter(last_store_col_idx + 5)          # العجز
     col_coverage = get_column_letter(last_store_col_idx + 6)         # حالة التغطية
+    col_batch_notes = get_column_letter(last_store_col_idx + 7)       # ملاحظات الدفعة
 
     header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
     header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
@@ -164,45 +167,68 @@ def process_plan_and_stock(uploaded_file):
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
     num_rows = len(df_plan)
+
+    # إنشاء قائمة الاختيارات المنسدلة (Data Validation) لملاحظات الدفعة
+    options_list = [
+        "دفعة 1", "دفعة 2", "دفعة 3", "دفعة 4", "دفعة 5", 
+        "دفعة 6", "دفعة 7", "دفعة 8", "دفعة 9", "دفعة 10",
+        "مكتمل", "معلق", "مطلوب استكمال", "تحت التجهيز", "ملغى"
+    ]
+    formula_options = f'"{",".join(options_list)}"'
+    
+    dv = DataValidation(type="list", formula1=formula_options, allow_blank=True)
+    dv.error ='عفواً، اختر قيمة من القائمة المنسدلة فقط'
+    dv.errorTitle = 'إدخال غير صالح'
+    dv.prompt = 'اختر الدفعة أو حالة التجهيز'
+    dv.promptTitle = 'ملاحظات الدفعة'
+    
+    ws_plan.add_data_validation(dv)
     
     # حقن الصفوف والمعادلات التفاعلية
     for idx, row in enumerate(df_plan.itertuples(index=False), start=2):
         item_size = row[0]
         item = row[1]
         size = row[2]
-        store_vals = list(row[3:])
+        store_vals = list(row[3:3+len(store_cols)])
         
         total_plan_fmt = f"=SUM(D{idx}:{col_last_store}{idx})"
         stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
         prepped_qty = 0  # قيمة خلية تجهيز الخطة المبدئية
         
-        # معادلة رصيد الاستوك النهائي (الموجبة فقط)
+        # معادلة رصيد الاستوك النهائي
         final_stock_fmt = f'=MAX(0, {col_stock_qty}{idx}-{col_prep_qty}{idx})'
         
         # معادلة العجز الحقيقي
         deficit_fmt = f'=IF({col_total_plan}{idx}>{col_stock_qty}{idx}, {col_total_plan}{idx}-{col_stock_qty}{idx}, 0)'
         
-        # معادلة حالة التغطية المحدثة
+        # معادلة حالة التغطية
         coverage_fmt = (
             f'=IF({col_final_stock}{idx}>{col_total_plan}{idx}, "مكتمل بالكامل + فائض مخزون", '
             f'IF({col_final_stock}{idx}={col_total_plan}{idx}, "مكتمل بالكامل", '
             f'IF({col_stock_qty}{idx}>0, "تغطية جزئية", "عجز كامل")))'
         )
         
-        row_data = [item_size, item, size] + store_vals + [total_plan_fmt, stock_qty_fmt, prepped_qty, final_stock_fmt, deficit_fmt, coverage_fmt]
+        default_batch_note = "دفعة 1"
+        
+        row_data = [item_size, item, size] + store_vals + [
+            total_plan_fmt, stock_qty_fmt, prepped_qty, final_stock_fmt, deficit_fmt, coverage_fmt, default_batch_note
+        ]
         ws_plan.append(row_data)
 
-        # ربط الشيت الثالث (الاستوك النهائي) بعمود رصيد الاستوك النهائي تلقائياً
+        # ربط شيت الاستوك النهائي تلقائياً
         ws_final_stock.append([item_size, f"=Reallocation_Plan!{col_final_stock}{idx}"])
 
-    # التنسيقات الشرطية
-    yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') 
-    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    
+    # تطبيق القائمة المنسدلة على كل نطاق عمود ملاحظات الدفعة
+    dv.add(f"{col_batch_notes}2:{col_batch_notes}{num_rows + 1}")
 
-    # التنسيق الشرطي لرصيد الاستوك
+    # التنسيقات الشرطية
+    soft_yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') # أصفر خفيف تمييز المخزون المتاح
+    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')          # أحمر خفيف للعجز
+
+    # تطبيق التظليل الأصفر الخفيف حصرياً على عمود "رصيد الاستوك" المتاح (> 0)
     ws_plan.conditional_formatting.add(
         f"{col_stock_qty}2:{col_stock_qty}{num_rows + 1}",
-        CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=yellow_fill)
+        CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=soft_yellow_fill)
     )
 
     # التنسيق الشرطي للعجز
@@ -211,10 +237,11 @@ def process_plan_and_stock(uploaded_file):
         CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=red_fill)
     )
 
+    # ضبط أبعاد الأعمدة تلقائياً
     for col in ws_plan.columns:
         max_len = max(len(str(cell.value or '')) for cell in col[:1])
         col_letter = get_column_letter(col[0].column)
-        ws_plan.column_dimensions[col_letter].width = max(max_len + 3, 10)
+        ws_plan.column_dimensions[col_letter].width = max(max_len + 3, 12)
 
     output = io.BytesIO()
     wb.save(output)
@@ -232,13 +259,13 @@ uploaded_file = st.file_uploader("📥 قم برفع ملف الخطة والا�
 
 if uploaded_file is not None:
     if st.button("🛸 بدء التحليل البرمجي وتوليد الخطة"):
-        with st.spinner("جاري قراءة البيانات، معالجة المعادلات الذكية، وتجهيز الداشبورد..."):
+        with st.spinner("جاري قراءة البيانات، معالجة القوائم المنسدلة، وتطوير شيت الأكسيل..."):
             excel_out, df_plan, df_stock = process_plan_and_stock(uploaded_file)
             if excel_out:
                 st.session_state['excel_out'] = excel_out
                 st.session_state['df_plan'] = df_plan
                 st.session_state['df_stock'] = df_stock
-                st.success("✨ تم معالجة البيانات بنجاح وبناء محرك التحليل والترحيل الذكي!")
+                st.success("✨ تم تحديث الملف وإضافة القائمة المنسدلة وضبط الألوان بنجاح!")
 
 if 'excel_out' in st.session_state:
     st.divider()
@@ -246,7 +273,7 @@ if 'excel_out' in st.session_state:
     col_dl, col_blank = st.columns([1, 2])
     with col_dl:
         st.download_button(
-            label="💾 تصدير شيت الخطة والمخزون النهائي (Excel)",
+            label="💾 تصدير شيت الخطة والمخزون المحدث (Excel)",
             data=st.session_state['excel_out'],
             file_name="Riven_Plan_Master_Processed.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -258,7 +285,7 @@ if 'excel_out' in st.session_state:
     df_stock = st.session_state['df_stock']
     
     stock_map = dict(zip(df_stock.iloc[:, 0], df_stock.iloc[:, 1]))
-    store_cols = df_plan.columns[3:]
+    store_cols = [c for c in df_plan.columns[3:] if not str(c).startswith('Unnamed')]
     
     df_calc = df_plan.copy()
 
