@@ -1,291 +1,137 @@
 import streamlit as st
 import pandas as pd
-import io
 import openpyxl
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.formatting.rule import CellIsRule
+from openpyxl.utils import get_column_letter
+import io
 
-# 1. إعدادات الصفحة
-st.set_page_config(
-    page_title="Riven stock online",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# 2. تصميم CSS نيون وتنسيق العرض
-st.markdown("""
-    <style>
-    .block-container {
-        max-width: 98% !important;
-        padding-top: 3.5rem !important;
-        padding-bottom: 2rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-    }
-
-    .stApp {
-        background-color: #080b11 !important;
-        color: #e2e8f0 !important;
-        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        direction: rtl;
-    }
-
-    .riven-success-banner {
-        background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-        border: 2px solid #00f2fe;
-        border-radius: 14px;
-        padding: 10px;
-        text-align: center;
-        margin-bottom: 15px;
-        box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
-    }
-
-    .riven-banner-title {
-        color: #00f2fe;
-        font-size: 1.5rem;
-        font-weight: 900;
-        letter-spacing: 2px;
-    }
-
-    @keyframes pulse-green {
-        0% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
-        50% { box-shadow: 0 0 25px rgba(0, 255, 136, 0.8); }
-        100% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
-    }
-
-    @keyframes pulse-red {
-        0% { box-shadow: 0 0 10px rgba(255, 0, 127, 0.3); }
-        50% { box-shadow: 0 0 25px rgba(255, 0, 127, 0.8); }
-        100% { box-shadow: 0 0 10px rgba(255, 0, 127, 0.3); }
-    }
-
-    .neon-card-green {
-        background: #0f172a;
-        border: 2px solid #00ff88;
-        border-radius: 12px;
-        padding: 12px;
-        text-align: center;
-        animation: pulse-green 2.5s infinite ease-in-out;
-    }
-
-    .neon-card-red {
-        background: #0f172a;
-        border: 2px solid #ff007f;
-        border-radius: 12px;
-        padding: 12px;
-        text-align: center;
-        animation: pulse-red 2s infinite ease-in-out;
-    }
-
-    .card-title { color: #cbd5e1 !important; font-size: 0.9rem; font-weight: 700; }
-    .card-value-green { color: #00ff88 !important; font-size: 2rem; font-weight: 900; }
-    .card-value-red { color: #ff007f !important; font-size: 2rem; font-weight: 900; }
-
-    div[data-testid="stDownloadButton"]>button, .stButton>button {
-        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
-        color: #080b11 !important;
-        border-radius: 10px !important;
-        font-weight: bold !important;
-        border: none !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# 3. بنر التطبيق
-st.markdown("""
-    <div class="riven-success-banner">
-        <div class="riven-banner-title">⚡ Riven stock online ⚡</div>
-    </div>
-""", unsafe_allow_html=True)
-
-def clear_session():
-    st.session_state.clear()
-    st.rerun()
-
-# شاشة رفع الملف לבدء العمل
-if 'df_main' not in st.session_state:
-    st.info("📂 قم برفع ملف Excel لبدء العمل. ستبقى بياناتك محفوظة في الجلسة حتى تنهي تعديلاتك وتحمل الملف.")
-    uploaded_file = st.file_uploader("", type=["xlsx"])
-    if uploaded_file:
-        try:
-            xls = pd.ExcelFile(uploaded_file)
-            df_prep = pd.read_excel(uploaded_file, sheet_name=xls.sheet_names[0])
-            
-            # تنظيف الفهرس والأعمدة المكررة
-            df_prep = df_prep.loc[:, ~df_prep.columns.duplicated()].reset_index(drop=True)
-            
-            if 'دفعة اولى' in df_prep.columns:
-                df_prep.rename(columns={'دفعة اولى': 'Batch'}, inplace=True)
-            elif 'Batch' not in df_prep.columns:
-                df_prep['Batch'] = None
-
-            size_idx = df_prep.columns.get_loc('Size')
-            qty_idx = df_prep.columns.get_loc('qty') if 'qty' in df_prep.columns else len(df_prep.columns)
-            
-            reserved = {'Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff', 'Batch', 'دفعة اولى'}
-            branch_cols = [str(c).strip() for c in df_prep.columns[size_idx + 1 : qty_idx] if str(c).strip() not in reserved]
-            
-            if 'stock' not in df_prep.columns: df_prep['stock'] = 0
-            
-            for b in branch_cols:
-                df_prep[b] = pd.to_numeric(df_prep[b], errors='coerce')
-                
-            df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
-            df_prep['diff'] = df_prep['stock'] - df_prep['qty']
-            
-            df_prep['Item-Size'] = df_prep['Item-Size'].astype(str)
-            df_prep['Item'] = df_prep['Item'].astype(str)
-            df_prep['Size'] = df_prep['Size'].astype(str)
-
-            st.session_state.df_main = df_prep
-            st.session_state.branch_cols = branch_cols
-            st.session_state.uploaded_file_name = uploaded_file.name
-            st.rerun()
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء تحميل الملف: {e}")
-
-else:
-    # الشريط العلوي
-    col1, col2 = st.columns([5, 1])
-    with col1: 
-        st.success(f"💾 **الملف النشط في الجلسة:** {st.session_state.get('uploaded_file_name')}")
-    with col2: 
-        if st.button("🗑️ إغلاق الشيت الحالي"):
-            clear_session()
-
-    df_work = st.session_state.df_main
-    branch_cols = st.session_state.branch_cols
-
-    if 'Batch' not in df_work.columns:
-        df_work['Batch'] = None
-
-    # إحصائيات مع أنيميشن النيون
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown(f"""
-            <div class="neon-card-green">
-                <div class="card-title">إجمالي الأصناف</div>
-                <div class="card-value-green">{len(df_work):,}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        shortage_cnt = (df_work['diff'] < 0).sum()
-        st.markdown(f"""
-            <div class="neon-card-red">
-                <div class="card-title">أصناف العجز</div>
-                <div class="card-value-red">{shortage_cnt:,}</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    st.write("")
-
-    # أدوات التصفية والبحث
-    view_option = st.radio("خيارات العرض:", ["الشيت كامل", "العجز فقط"], horizontal=True)
-    search_input = st.text_input("🔍 بحث بالأيتم أو (الأيتم + المقاس):", "", placeholder="مثال: 0192891 للكل أو 0192891 33 لمقاس محدد").strip()
-
-    if view_option == "العجز فقط":
-        df_filtered = df_work[df_work['diff'] < 0].copy()
-    else:
-        df_filtered = df_work.copy()
-
-    # دالة البحث الدقيقة
-    if search_input:
-        parts = search_input.split()
-        
-        def match_precise(row):
-            item_val = str(row['Item']).strip().upper()
-            item_size_val = str(row['Item-Size']).strip().upper()
-            size_val = str(row['Size']).strip().upper()
-            
-            if len(parts) >= 2:
-                search_code = parts[0].upper()
-                search_size = parts[1].upper()
-                code_match = (search_code in item_val) or (search_code in item_size_val)
-                size_match = (search_size == size_val) or (item_size_val.endswith(search_size))
-                return code_match and size_match
-            else:
-                search_code = parts[0].upper()
-                return (search_code in item_val) or (search_code in item_size_val)
-
-        mask = df_filtered.apply(match_precise, axis=1)
-        df_display = df_filtered[mask].copy()
-    else:
-        df_display = df_filtered.copy()
-
-    raw_display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['Batch']
-    display_cols = list(dict.fromkeys([c for c in raw_display_cols if c in df_display.columns]))
-
-    batch_options = [""] + [f"الدفعة {i}" for i in range(1, 51)]
-
-    column_config = {
-        "Batch": st.column_config.SelectboxColumn(
-            "Batch",
-            help="اختر رقم الدفعة",
-            options=batch_options,
-            required=False
-        )
-    }
-
-    df_editor_data = df_display[display_cols]
-    disabled_cols = [c for c in ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] if c in df_editor_data.columns]
-
-    # عرض جدول التعديل المباشر
-    edited_df = st.data_editor(
-        df_editor_data,
-        key="editor_grid",
-        use_container_width=True,
-        height=480,
-        column_config=column_config,
-        disabled=disabled_cols,
-        num_rows="fixed"
-    )
-
-    # تحديث البيانات مباشرة في st.session_state بأمان تام
-    for idx in edited_df.index:
-        for col in branch_cols + ['Batch']:
-            if col in edited_df.columns:
-                new_val = edited_df.at[idx, col]
-                st.session_state.df_main.at[idx, col] = new_val
-
-    # إعادة إحصاء المجموع والعجز تلقائياً للأرقام
-    for b in branch_cols:
-        st.session_state.df_main[b] = pd.to_numeric(st.session_state.df_main[b], errors='coerce')
-    st.session_state.df_main['qty'] = st.session_state.df_main[branch_cols].sum(axis=1)
-    st.session_state.df_main['diff'] = st.session_state.df_main['stock'] - st.session_state.df_main['qty']
-
-    st.markdown("---")
-
-    # دالة إعداد ملف Excel للتنزيل مع المعادلات
-    def generate_excel_bytes(df_to_export):
-        output = io.BytesIO()
-        export_df = df_to_export.copy()
-        
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            export_df.to_excel(writer, index=False, sheet_name='Exported_Stock')
-            worksheet = writer.sheets['Exported_Stock']
-
-            qty_col_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc('qty') + 1)
-            stock_col_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc('stock') + 1)
-            diff_col_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc('diff') + 1)
-            
-            first_b_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc(branch_cols[0]) + 1)
-            last_b_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc(branch_cols[-1]) + 1)
-
-            for row_idx in range(2, len(export_df) + 2):
-                worksheet[f'{qty_col_letter}{row_idx}'] = f"=SUM({first_b_letter}{row_idx}:{last_b_letter}{row_idx})"
-                worksheet[f'{diff_col_letter}{row_idx}'] = f"={stock_col_letter}{row_idx}-{qty_col_letter}{row_idx}"
-
-        output.seek(0)
-        return output.getvalue()
-
-    # قسم التصدير بحسب الوضع والفلتر الحالي
-    st.markdown("### 📥 تصدير البيانات الشيت المعدل")
+def process_plan_and_stock(uploaded_file):
+    # 1. قراءة كافة ورقات العمل من الملف المرفوع
+    xls = pd.ExcelFile(uploaded_file)
+    sheet_names = xls.sheet_names
     
-    file_label = f"Riven_{view_option}_Filtered.xlsx"
-    excel_data = generate_excel_bytes(df_display[display_cols])
+    plan_sheet = None
+    stock_sheet = None
+    
+    # التعرف الذكي على الشيتات
+    for sheet in sheet_names:
+        sheet_lower = sheet.lower()
+        if 'plan' in sheet_lower or 'reallocation' in sheet_lower:
+            plan_sheet = sheet
+        elif 'ستوك' in sheet_lower or 'stock' in sheet_lower:
+            stock_sheet = sheet
 
-    st.download_button(
-        label=f"📥 تحميل الشيت المعدل والمفلتر حالياً ({len(df_display)} صنف)",
-        data=excel_data,
-        file_name=file_label,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    if not plan_sheet or not stock_sheet:
+        st.error("تعذر التعرف التلقائي على شيت الخطة وشيت الاستوك. يرجى التأكد من المسميات.")
+        return None
+
+    # قراءة البيانات عبر Pandas
+    df_plan = pd.read_excel(uploaded_file, sheet_name=plan_sheet)
+    df_stock = pd.read_excel(uploaded_file, sheet_name=stock_sheet)
+
+    # 2. بناء ملف Excel جديد عالي الكفاءة باستخدام OpenPyXL
+    wb = openpyxl.Workbook()
+    
+    # إعداد ورقة الخطة
+    ws_plan = wb.active
+    ws_plan.title = 'Reallocation_Plan'
+    ws_plan.views.sheetView[0].showGridLines = True
+
+    # إعداد ورقة الاستوك
+    ws_stock = wb.create_sheet(title='ستوك')
+    ws_stock.views.sheetView[0].showGridLines = True
+
+    # نقل بيانات الاستوك
+    ws_stock.append(['Product/Barcode', 'Quantity'])
+    for row in df_stock.itertuples(index=False):
+        ws_stock.append([row[0], row[1]])
+
+    # تحديد أعمدة الفروع والأعمدة الجديدة
+    store_cols = df_plan.columns[3:].tolist()
+    new_headers = (
+        ['Item-Size', 'Item', 'Size'] 
+        + store_cols 
+        + ['إجمالي الخطة', 'رصيد الاستوك', 'الفرق / العجز', 'حالة التغطية', 'ملاحظات الدفعات']
     )
+    ws_plan.append(new_headers)
+
+    # تنسيق الهيدر (Header Styling)
+    header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid') # أزرق داكن احترافي
+    header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+
+    for col_num in range(1, len(new_headers) + 1):
+        cell = ws_plan.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+    # 3. حقن الصفوف والمعادلات البرمجية
+    num_rows = len(df_plan)
+    for idx, row in enumerate(df_plan.itertuples(index=False), start=2):
+        item_size = row[0]
+        item = row[1]
+        size = row[2]
+        store_vals = list(row[3:])
+        
+        # صيغ المعادلات
+        total_plan_fmt = f"=SUM(D{idx}:AM{idx})"
+        stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
+        variance_fmt = f'=AO{idx}-AN{idx}'
+        coverage_fmt = f'=IF(AO{idx}>=AN{idx}, "مكتمل بالكامل", IF(AO{idx}>0, "تغطية جزئية", "عجز كامل"))'
+        
+        row_data = [item_size, item, size] + store_vals + [total_plan_fmt, stock_qty_fmt, variance_fmt, coverage_fmt, ""]
+        ws_plan.append(row_data)
+
+    # 4. إضافة قائمة اختيار الدفعات (Data Validation Dropdown)
+    dv = DataValidation(type="list", formula1='"دفعة 1, دفعة 2, دفعة 3, جاري التجهيز, مؤجل, تم الشحن"', allow_blank=True)
+    ws_plan.add_data_validation(dv)
+    dv.add(f"AR2:AR{num_rows + 1}")
+
+    # 5. التنسيق الشرطي (Conditional Formatting)
+    yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') # أصفر خفيف
+    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    # أحمر خفيف
+
+    # تمييز الأصناف المتاحة في الاستوك باللون الأصفر
+    ws_plan.conditional_formatting.add(
+        f"AO2:AO{num_rows + 1}",
+        CellIsRule(operator='greaterThan', formula=['0'], stopIfTrue=False, fill=yellow_fill)
+    )
+
+    # تمييز العجز باللون الأحمر
+    ws_plan.conditional_formatting.add(
+        f"AP2:AP{num_rows + 1}",
+        CellIsRule(operator='lessThan', formula=['0'], stopIfTrue=False, fill=red_fill)
+    )
+
+    # ضبط عرض الأعمدة تلقائياً
+    for col in ws_plan.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col[:1])
+        col_letter = get_column_letter(col[0].column)
+        ws_plan.column_dimensions[col_letter].width = max(max_len + 3, 10)
+
+    # حفظ الملف في ذاكرة مؤقتة (Buffer) للتنزيل الفوري
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+# --- واجهة المستخدم (Streamlit Interface) ---
+st.title("⚡ محرك معالجة وتوليد خطط الأونلاين التلقائي")
+st.write("قم برفع شيت الخطة والاستوك الموحد لتوليد الشيت المعالج التفاعلي فوراً للمدير.")
+
+uploaded_file = st.file_uploader("رفع ملف Excel (يحتوي على ورقتي الخطة والاستوك)", type=['xlsx'])
+
+if uploaded_file is not None:
+    if st.button("🚀 معالجة وتوليد الشيت الآن"):
+        with st.spinner("جاري معالجة البيانات، ربط الاستوك، وحقن المعادلات..."):
+            processed_file = process_plan_and_stock(uploaded_file)
+            if processed_file:
+                st.success("تمت المعالجة بنجاح وبدون أي أخطاء!")
+                st.download_button(
+                    label="📥 تحميل شيت الخطة المطور للمدير",
+                    data=processed_file,
+                    file_name="Plan_Processed_Final.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
