@@ -226,12 +226,12 @@ def process_plan_and_stock(uploaded_file):
 # --- الواجهة الرئيسية (Main Console UI) ---
 
 st.markdown("<h1 class='neon-title'>⚡ RIVEN AI ANALYTICS ENGINE</h1>", unsafe_allow_html=True)
-st.markdown("<p class='neon-subtitle'>نظام معالجة وتوليد خطط التوزيع والتعدين المخزني الذكي</p>", unsafe_allow_html=True)
+st.markdown("<p class='neon-subtitle'>نظام معالجة وتوليد خطط التوزيع</p>", unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader("📥 قم برفع ملف الخطة والاستوك (xlsx)", type=['xlsx'])
 
 if uploaded_file is not None:
-    if st.button("🛸 بدء التحليل البرمجي وتوليد الخطة الخارقة"):
+    if st.button("🛸 بدء التحليل البرمجي وتوليد الخطة"):
         with st.spinner("جاري قراءة البيانات، معالجة المعادلات الذكية، وتجهيز الداشبورد..."):
             excel_out, df_plan, df_stock = process_plan_and_stock(uploaded_file)
             if excel_out:
