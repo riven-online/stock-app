@@ -128,6 +128,7 @@ def clear_db():
 if 'df_main' not in st.session_state:
     saved_df, saved_branches, saved_filename = load_from_db()
     if saved_df is not None:
+        saved_df = saved_df.reset_index(drop=True)
         if 'دفعة اولى' in saved_df.columns:
             saved_df.rename(columns={'دفعة اولى': 'Batch'}, inplace=True)
         st.session_state.df_main = saved_df
@@ -143,8 +144,8 @@ if 'df_main' not in st.session_state:
             xls = pd.ExcelFile(uploaded_file)
             df_prep = pd.read_excel(uploaded_file, sheet_name=xls.sheet_names[0])
             
-            # توحيد اسم عمود الدفعة وإزالت التكرارات
-            df_prep = df_prep.loc[:, ~df_prep.columns.duplicated()]
+            # تنظيف الفهرس وإزالة الأعمدة المكررة
+            df_prep = df_prep.loc[:, ~df_prep.columns.duplicated()].reset_index(drop=True)
             
             if 'دفعة اولى' in df_prep.columns:
                 df_prep.rename(columns={'دفعة اولى': 'Batch'}, inplace=True)
@@ -243,11 +244,9 @@ else:
     else:
         df_display = df_filtered
 
-    # ضمان عدم تكرار الأعمدة المعتمدة للعرض
     raw_display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['Batch']
     display_cols = list(dict.fromkeys([c for c in raw_display_cols if c in df_display.columns]))
 
-    # تجهيز قائمة خيارات الدفعة
     batch_options = [""] + [f"الدفعة {i}" for i in range(1, 51)]
 
     column_config = {
@@ -259,10 +258,7 @@ else:
         )
     }
 
-    # تجهيز الجدول للعرض مع إزالة تكرار الأعمدة إن وجد
     df_editor_data = df_display[display_cols].loc[:, ~df_display[display_cols].columns.duplicated()]
-
-    # الأعمدة المعطلة عن التعديل المباشر
     disabled_cols = [c for c in ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] if c in df_editor_data.columns]
 
     edited_df = st.data_editor(
@@ -275,14 +271,20 @@ else:
         num_rows="fixed"
     )
 
-    # حفظ التعديلات فورياً
+    # حفظ التعديلات بأمان تام وتفادي أخطاء pandas
     has_changed = False
     for idx in edited_df.index:
         for col in branch_cols + ['Batch']:
             if col in edited_df.columns:
-                val = edited_df.loc[idx, col]
-                if st.session_state.df_main.loc[idx, col] != val:
-                    st.session_state.df_main.loc[idx, col] = val
+                val = edited_df.at[idx, col]
+                old_val = st.session_state.df_main.at[idx, col]
+                
+                # إهمال المقارنة إذا كانت القيمتان فارغتين
+                if pd.isna(val) and pd.isna(old_val):
+                    continue
+                
+                if val != old_val:
+                    st.session_state.df_main.at[idx, col] = val
                     has_changed = True
 
     if has_changed:
