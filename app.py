@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import openpyxl
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.utils import get_column_letter
@@ -25,7 +25,7 @@ def process_plan_and_stock(uploaded_file):
             stock_sheet = sheet
 
     if not plan_sheet or not stock_sheet:
-        st.error("تعذر التعرف التلقائي على شيت الخطة وشيت الاستوك.")
+        st.error("تعذر التعرف التلقائي على شيت الخطة وشيت الاستوك. يرجى التأكد من المسميات.")
         return None, None, None
 
     df_plan = pd.read_excel(uploaded_file, sheet_name=plan_sheet)
@@ -48,7 +48,7 @@ def process_plan_and_stock(uploaded_file):
 
     store_cols = df_plan.columns[3:].tolist()
     
-    # بناء الأعمدة المحدثة بالترتيب الجديد
+    # ترتيب الأعمدة الجديد والمطور
     new_headers = (
         ['Item-Size', 'Item', 'Size'] 
         + store_cols 
@@ -67,7 +67,7 @@ def process_plan_and_stock(uploaded_file):
 
     num_rows = len(df_plan)
     
-    # كتابة الصفوف والمعادلات
+    # كتابة الصفوف والمعادلات التفاعلية
     # AN = إجمالي الخطة | AO = رصيد الاستوك | AP = تم تجهيز الخطة | AQ = الفرق/العجز | AR = حالة التغطية | AS = ملاحظات الدفعات
     for idx, row in enumerate(df_plan.itertuples(index=False), start=2):
         item_size = row[0]
@@ -77,7 +77,7 @@ def process_plan_and_stock(uploaded_file):
         
         total_plan_fmt = f"=SUM(D{idx}:AM{idx})"
         stock_qty_fmt = f'=IFERROR(VLOOKUP(A{idx}, ستوك!A:B, 2, FALSE), 0)'
-        prepped_qty = 0  # افتراضي عند الإنشاء
+        prepped_qty = 0  # قيمة افتراضية لإدخال الكمية المجهزة
         variance_fmt = f'=AO{idx}-AP{idx}'
         
         # معادلة حالة التغطية المحدثة
@@ -90,14 +90,14 @@ def process_plan_and_stock(uploaded_file):
         row_data = [item_size, item, size] + store_vals + [total_plan_fmt, stock_qty_fmt, prepped_qty, variance_fmt, coverage_fmt, ""]
         ws_plan.append(row_data)
 
-    # قائمة الدفعات المنسدلة في العمود AS (col 45)
+    # إضافة القائمة المنسدلة لعمود ملاحظات الدفعات (Col AS)
     dv = DataValidation(type="list", formula1='"دفعة 1, دفعة 2, دفعة 3, جاري التجهيز, مؤجل, تم الشحن"', allow_blank=True)
     ws_plan.add_data_validation(dv)
     dv.add(f"AS2:AS{num_rows + 1}")
 
-    # التنسيق الشرطي
-    yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') # أصفر للاستوك
-    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    # أحمر للعجز
+    # التنسيق الشرطي والتظليل
+    yellow_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid') # أصفر خفيف للأصناف المتاحة
+    red_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    # أحمر خفيف للعجز
 
     ws_plan.conditional_formatting.add(
         f"AO2:AO{num_rows + 1}",
@@ -120,12 +120,12 @@ def process_plan_and_stock(uploaded_file):
     
     return output, df_plan, df_stock
 
-# --- الواجهة البرمجية والداشبورد (Streamlit UI & Dashboard) ---
+# --- واجهة المستخدم والداشبورد (Streamlit Dashboard UI) ---
 
 st.title("⚡ المنظومة الذكية لإدارة ومعالجة خطط الأونلاين")
-st.markdown("رفع الملف الموحد | معالجة الحسابات والدفعات | داشبورد فحص وتصفية الحالات")
+st.markdown("معالجة الحسابات والدفعات | الربط مع الاستوك | داشبورد فحص وتصفية الحالات")
 
-uploaded_file = st.file_uploader("قم برفع ملف Excel (يحتوي على الخطة والاستوك)", type=['xlsx'])
+uploaded_file = st.file_uploader("قم برفع ملف Excel (يحتوي على ورقتي الخطة والاستوك)", type=['xlsx'])
 
 if uploaded_file is not None:
     if st.button("🚀 معالجة وبناء الخطة"):
@@ -141,7 +141,7 @@ if uploaded_file is not None:
 if 'excel_out' in st.session_state:
     st.divider()
     
-    # 1. زر تحميل الشيت الجاهز
+    # زر تنزيل الملف النهائي
     st.download_button(
         label="📥 تحميل شيت الخطة المطور والإكسيل التفاعلي",
         data=st.session_state['excel_out'],
@@ -154,14 +154,14 @@ if 'excel_out' in st.session_state:
     df_plan = st.session_state['df_plan']
     df_stock = st.session_state['df_stock']
     
-    # دمج البيانات للعرض المباشر في الداشبورد
+    # دمج البيانات للحسابات السريعة
     stock_map = dict(zip(df_stock.iloc[:, 0], df_stock.iloc[:, 1]))
     
     store_cols = df_plan.columns[3:]
     df_calc = df_plan.copy()
     df_calc['إجمالي الخطة'] = df_calc[store_cols].sum(axis=1)
     df_calc['رصيد الاستوك'] = df_calc['Item-Size'].map(stock_map).fillna(0)
-    df_calc['تم تجهيز الخطة'] = 0  # بالقيمة الابتدائية
+    df_calc['تم تجهيز الخطة'] = 0
     df_calc['الفرق / العجز'] = df_calc['رصيد الاستوك'] - df_calc['تم تجهيز الخطة']
 
     def assign_status(row):
@@ -178,21 +178,22 @@ if 'excel_out' in st.session_state:
 
     df_calc['حالة التغطية'] = df_calc.apply(assign_status, axis=1)
 
-    # عرض كروت الأرقام المجمعة (Metrics/KPIs)
+    # عرض كروت الأرقام التجميعية (KPI Metrics)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("إجمالي مطلوب الخطة", f"{int(df_calc['إجمالي الخطة'].sum()):,} قطعة")
     col2.metric("إجمالي الاستوك المتاح", f"{int(df_calc['رصيد الاستوك'].sum()):,} قطعة")
     col3.metric("تم تجهيزه", f"{int(df_calc['تم تجهيز الخطة'].sum()):,} قطعة")
     col4.metric("إجمالي الفائض / العجز", f"{int(df_calc['الفرق / العجز'].sum()):,} قطعة")
 
-    # رسم بياني لتوزيع الحالات
+    # رسم بياني تفاعلي احترافي من Plotly
+    st.subheader("📈 توزيع الأصناف حسب حالة التغطية")
     status_counts = df_calc['حالة التغطية'].value_counts().reset_index()
     status_counts.columns = ['حالة التغطية', 'العدد']
     
-    fig = px.pie(status_counts, values='العدد', names='حالة التغطية', title="توزيع الأصناف حسب حالة التغطية", hole=0.4)
+    fig = px.pie(status_counts, values='العدد', names='حالة التغطية', title="نسب توزيع حالات التغطية للأصناف", hole=0.4)
     st.plotly_chart(fig, use_container_width=True)
 
-    # 2. نظام التصفية والعرض الذكي (Smart Filter & Drill-down)
+    # نظام الفلترة والعرض
     st.subheader("🔍 عرض وتصفية الأصناف حسب الحالة")
     
     selected_status = st.selectbox(
@@ -205,7 +206,7 @@ if 'excel_out' in st.session_state:
     else:
         filtered_df = df_calc
 
-    st.write(f"عرض **{len(filtered_df)}** صنف متوافق مع الفلتر:")
+    st.write(f"عرض **{len(filtered_df)}** صنف متوافق مع التصفية:")
     
     display_cols = ['Item-Size', 'Item', 'Size', 'إجمالي الخطة', 'رصيد الاستوك', 'تم تجهيز الخطة', 'الفرق / العجز', 'حالة التغطية']
     st.dataframe(filtered_df[display_cols], use_container_width=True)
