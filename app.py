@@ -4,7 +4,6 @@ import io
 import openpyxl
 import sqlite3
 import os
-import re
 
 # 1. إعدادات الصفحة
 st.set_page_config(
@@ -144,6 +143,9 @@ if 'df_main' not in st.session_state:
             xls = pd.ExcelFile(uploaded_file)
             df_prep = pd.read_excel(uploaded_file, sheet_name=xls.sheet_names[0])
             
+            # توحيد اسم عمود الدفعة وإزالت التكرارات
+            df_prep = df_prep.loc[:, ~df_prep.columns.duplicated()]
+            
             if 'دفعة اولى' in df_prep.columns:
                 df_prep.rename(columns={'دفعة اولى': 'Batch'}, inplace=True)
             elif 'Batch' not in df_prep.columns:
@@ -151,11 +153,12 @@ if 'df_main' not in st.session_state:
 
             size_idx = df_prep.columns.get_loc('Size')
             qty_idx = df_prep.columns.get_loc('qty') if 'qty' in df_prep.columns else len(df_prep.columns)
-            branch_cols = [c for c in df_prep.columns[size_idx + 1 : qty_idx] if c not in ['qty', 'stock', 'diff', 'Batch', 'دفعة اولى']]
+            
+            reserved = {'Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff', 'Batch', 'دفعة اولى'}
+            branch_cols = [str(c).strip() for c in df_prep.columns[size_idx + 1 : qty_idx] if str(c).strip() not in reserved]
             
             if 'stock' not in df_prep.columns: df_prep['stock'] = 0
             
-            # تحويل قيم الفروع لأرقام مع استبدال الأخطاء بصفر للحساب الصحيح
             for b in branch_cols:
                 df_prep[b] = pd.to_numeric(df_prep[b], errors='coerce')
                 
@@ -240,9 +243,11 @@ else:
     else:
         df_display = df_filtered
 
-    display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['Batch']
+    # ضمان عدم تكرار الأعمدة المعتمدة للعرض
+    raw_display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['Batch']
+    display_cols = list(dict.fromkeys([c for c in raw_display_cols if c in df_display.columns]))
 
-    # قائمة خيارات عمود Batch (الدفعة 1 حتى 50)
+    # تجهيز قائمة خيارات الدفعة
     batch_options = [""] + [f"الدفعة {i}" for i in range(1, 51)]
 
     column_config = {
@@ -254,14 +259,19 @@ else:
         )
     }
 
-    # الجدول الذكي
+    # تجهيز الجدول للعرض مع إزالة تكرار الأعمدة إن وجد
+    df_editor_data = df_display[display_cols].loc[:, ~df_display[display_cols].columns.duplicated()]
+
+    # الأعمدة المعطلة عن التعديل المباشر
+    disabled_cols = [c for c in ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] if c in df_editor_data.columns]
+
     edited_df = st.data_editor(
-        df_display[display_cols],
+        df_editor_data,
         key="editor_grid",
         use_container_width=True,
         height=480,
         column_config=column_config,
-        disabled=['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'],
+        disabled=disabled_cols,
         num_rows="fixed"
     )
 
@@ -269,10 +279,11 @@ else:
     has_changed = False
     for idx in edited_df.index:
         for col in branch_cols + ['Batch']:
-            val = edited_df.loc[idx, col]
-            if st.session_state.df_main.loc[idx, col] != val:
-                st.session_state.df_main.loc[idx, col] = val
-                has_changed = True
+            if col in edited_df.columns:
+                val = edited_df.loc[idx, col]
+                if st.session_state.df_main.loc[idx, col] != val:
+                    st.session_state.df_main.loc[idx, col] = val
+                    has_changed = True
 
     if has_changed:
         for b in branch_cols:
@@ -284,14 +295,13 @@ else:
 
     st.markdown("---")
 
-    # دالة إعداد ملف Excel مستقر ومضمون التنزيل
+    # دالة إعداد ملف Excel للتنزيل
     def generate_excel_bytes(df_to_export):
         output = io.BytesIO()
         export_df = df_to_export.copy()
         
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             export_df.to_excel(writer, index=False, sheet_name='Exported_Stock')
-            workbook = writer.book
             worksheet = writer.sheets['Exported_Stock']
 
             qty_col_letter = openpyxl.utils.get_column_letter(export_df.columns.get_loc('qty') + 1)
@@ -308,7 +318,7 @@ else:
         output.seek(0)
         return output.getvalue()
 
-    # قسم التصدير بحسب الفلتر والبحث المعروض حالياً على الموقع
+    # قسم التصدير بحسب الفلتر الحالي
     st.markdown("### 📥 تصدير البيانات حسب الوضع والفلترة الحالية للموقع")
     
     file_label = f"Riven_{view_option}_Filtered.xlsx"
