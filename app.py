@@ -100,7 +100,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# إدارة التخزين الدائم على القرص
+# إدارة التخزين الدائم
 DB_FILE = "riven_saved_data.db"
 
 def save_to_db(df, branch_cols, file_name):
@@ -129,7 +129,6 @@ def clear_db():
 if 'df_main' not in st.session_state:
     saved_df, saved_branches, saved_filename = load_from_db()
     if saved_df is not None:
-        # توحيد الهيدر القديم "دفعة اولى" إلى "Batch" إن وجد
         if 'دفعة اولى' in saved_df.columns:
             saved_df.rename(columns={'دفعة اولى': 'Batch'}, inplace=True)
         st.session_state.df_main = saved_df
@@ -145,7 +144,6 @@ if 'df_main' not in st.session_state:
             xls = pd.ExcelFile(uploaded_file)
             df_prep = pd.read_excel(uploaded_file, sheet_name=xls.sheet_names[0])
             
-            # توحيد اسم عمود الدفعة
             if 'دفعة اولى' in df_prep.columns:
                 df_prep.rename(columns={'دفعة اولى': 'Batch'}, inplace=True)
             elif 'Batch' not in df_prep.columns:
@@ -181,7 +179,6 @@ else:
     df_work = st.session_state.df_main
     branch_cols = st.session_state.branch_cols
 
-    # التأكد من وجود عمود Batch
     if 'Batch' not in df_work.columns:
         df_work['Batch'] = None
 
@@ -223,18 +220,14 @@ else:
             item_size_val = str(row['Item-Size']).strip().upper()
             size_val = str(row['Size']).strip().upper()
             
-            # إذا دخل المستخدم كلمتين (مثل: الكود والمقاس)
             if len(parts) >= 2:
                 search_code = parts[0].upper()
                 search_size = parts[1].upper()
                 code_match = (search_code in item_val) or (search_code in item_size_val)
                 size_match = (search_size == size_val) or (item_size_val.endswith(search_size))
                 return code_match and size_match
-            
-            # إذا دخل المستخدم كلمة واحدة (كود الايتم)
             else:
                 search_code = parts[0].upper()
-                # تطابق كامل مع الايتم أو احتواء بسيط دون تحديد المقاس
                 return (search_code in item_val) or (search_code in item_size_val)
 
         mask = df_filtered.apply(match_precise, axis=1)
@@ -244,20 +237,20 @@ else:
 
     display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['Batch']
 
-    # إعداد خيارات السهم للاختيار من 1 إلى 50 لعمود Batch
-    batch_options = [None] + [f"الدفعة {i}" for i in range(1, 51)]
+    # قائمة خيارات عمود Batch (الدفعة 1 حتى 50)
+    batch_options = [""] + [f"الدفعة {i}" for i in range(1, 51)]
 
-    # تكوين أعمدة الجدول القابل للتعديل بسرعة
+    # إعداد تكوين القائمة المنسدلة بدون أخطاء متوافقة مع كل نسخ Streamlit
     column_config = {
-        "Batch": st.column_config.Selectbox(
+        "Batch": st.column_config.SelectboxColumn(
             "Batch",
-            help="اختر رقم الدفعة من القائمة",
+            help="اختر رقم الدفعة",
             options=batch_options,
             required=False
         )
     }
 
-    # الجدول الذكي بتعديل سريع بضغطة واحدة
+    # الجدول الذكي
     edited_df = st.data_editor(
         df_display[display_cols],
         key="editor_grid",
@@ -268,7 +261,7 @@ else:
         num_rows="fixed"
     )
 
-    # حفظ التعديلات فورياً دون مسح البيانات القائمة
+    # حفظ التعديلات فورياً
     has_changed = False
     for idx in edited_df.index:
         for col in branch_cols + ['Batch']:
@@ -284,7 +277,7 @@ else:
 
     st.markdown("---")
 
-    # دالة إنشاء ملف Excel مع المعادلات
+    # تصدير البيانات مع المعادلات
     def export_excel_with_formulas(data_to_export):
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -305,7 +298,7 @@ else:
 
         return output.getvalue()
 
-    # قسم التصدير بحسب الفلتر والبحث المعروض حالياً على الموقع
+    # زر التحميل المفلتر
     st.markdown("### 📥 تصدير البيانات حسب الوضع والفلترة الحالية للموقع")
     
     file_label = f"Riven_{view_option}_Filtered.xlsx"
