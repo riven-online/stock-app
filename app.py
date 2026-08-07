@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+import openpyxl
 
 # 1. إعدادات الصفحة
 st.set_page_config(
@@ -27,15 +28,6 @@ st.markdown("""
         border-radius: 16px !important;
         box-shadow: 0 0 18px rgba(0, 242, 254, 0.25) !important;
         padding: 15px !important;
-    }
-
-    div[data-testid="stFileUploaderDropzone"] button,
-    section[data-testid="stFileUploaderDropzone"] button {
-        background: linear-gradient(135deg, #00f2fe 0%, #00b4d8 100%) !important;
-        color: #080b11 !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 800 !important;
     }
 
     .riven-success-banner {
@@ -72,9 +64,9 @@ st.markdown("""
 
     .dashboard-header {
         color: #00f2fe;
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         font-weight: 900;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
         margin-top: 15px;
         margin-bottom: 15px;
     }
@@ -99,16 +91,6 @@ st.markdown("""
         border-radius: 10px !important;
         font-weight: bold !important;
     }
-
-    /* تثبيت الهيدر والأعمدة المحددة عند السكرول */
-    div[data-testid="stDataFrame"] table th:nth-child(-n+6),
-    div[data-testid="stDataFrame"] table td:nth-child(-n+6) {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 2 !important;
-        background-color: #0f172a !important;
-        border-right: 1px solid rgba(0, 242, 254, 0.2) !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -126,7 +108,7 @@ st.markdown("""
 # 4. رفع الملف
 uploaded_file = st.file_uploader("", type=["xlsx"])
 
-# دالة تسوية العجز أوتوماتيكياً بالتساوي على الفروع
+# دالة التوزيع التلقائي للعجز
 def auto_rebalance_row(row, branch_cols, max_allowed):
     current_total = sum(row[b] for b in branch_cols)
     if current_total <= max_allowed or current_total == 0:
@@ -147,60 +129,52 @@ def auto_rebalance_row(row, branch_cols, max_allowed):
 
 if uploaded_file is not None:
     try:
-        # قراءة الشيتات
-        xls = pd.ExcelFile(uploaded_file)
-        sheet_names = xls.sheet_names
-        
-        prep_sheet = sheet_names[0]
-        df_prep = pd.read_excel(uploaded_file, sheet_name=prep_sheet)
+        # قراءة الشيت الأساسي والستوك عند التحميل لأول مرة
+        if 'df_main' not in st.session_state or st.session_state.get('uploaded_file_name') != uploaded_file.name:
+            xls = pd.ExcelFile(uploaded_file)
+            sheet_names = xls.sheet_names
+            
+            prep_sheet = sheet_names[0]
+            df_prep = pd.read_excel(uploaded_file, sheet_name=prep_sheet)
 
-        # التحقق من وجود شيت الستوك
-        if 'ستوك' in sheet_names:
-            df_stock = pd.read_excel(uploaded_file, sheet_name='ستوك')
-            stock_map = df_stock.set_index(df_stock.columns[0])[df_stock.columns[1]].to_dict()
-        else:
-            stock_map = {}
+            if 'ستوك' in sheet_names:
+                df_stock = pd.read_excel(uploaded_file, sheet_name='ستوك')
+                stock_map = df_stock.set_index(df_stock.columns[0])[df_stock.columns[1]].to_dict()
+            else:
+                stock_map = {}
 
-        # إيجاد حدود أعمدة الفروع
-        size_idx = df_prep.columns.get_loc('Size')
-        
-        # البحث عن الأعمدة الخاصة أو إنشاؤها
-        if 'qty' in df_prep.columns:
-            qty_idx = df_prep.columns.get_loc('qty')
-        else:
-            qty_idx = len(df_prep.columns)
+            size_idx = df_prep.columns.get_loc('Size')
+            qty_idx = df_prep.columns.get_loc('qty') if 'qty' in df_prep.columns else len(df_prep.columns)
+            
+            branch_cols = [c for c in df_prep.columns[size_idx + 1 : qty_idx] if c not in ['qty', 'stock', 'diff', 'دفعة اولى']]
 
-        branch_cols = [c for c in df_prep.columns[size_idx + 1 : qty_idx] if c not in ['qty', 'stock', 'diff', 'دفعة اولى']]
+            if 'stock' not in df_prep.columns:
+                df_prep['stock'] = df_prep['Item-Size'].map(stock_map).fillna(0)
+            else:
+                df_prep['stock'] = df_prep['Item-Size'].map(stock_map).fillna(df_prep['stock'])
 
-        # بناء أو تحديث الأعمدة الأربعة
-        if 'stock' not in df_prep.columns:
-            df_prep['stock'] = df_prep['Item-Size'].map(stock_map).fillna(0)
-        else:
-            df_prep['stock'] = df_prep['Item-Size'].map(stock_map).fillna(df_prep['stock'])
+            df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
+            df_prep['diff'] = df_prep['stock'] - df_prep['qty']
 
-        df_prep['qty'] = df_prep[branch_cols].sum(axis=1)
-        df_prep['diff'] = df_prep['stock'] - df_prep['qty']
+            if 'دفعة اولى' not in df_prep.columns:
+                df_prep['دفعة اولى'] = 'دفعه اولى'
 
-        if 'دفعة اولى' not in df_prep.columns:
-            df_prep['دفعة اولى'] = 'دفعه اولى'
+            df_prep['Item-Size'] = df_prep['Item-Size'].astype(str)
+            df_prep['Item'] = df_prep['Item'].astype(str)
+            df_prep['Size'] = df_prep['Size'].astype(str)
 
-        # ضبط أنواع البيانات
-        df_prep['Item-Size'] = df_prep['Item-Size'].astype(str)
-        df_prep['Item'] = df_prep['Item'].astype(str)
-        df_prep['Size'] = df_prep['Size'].astype(str)
+            st.session_state.df_main = df_prep.copy()
+            st.session_state.branch_cols = branch_cols
+            st.session_state.uploaded_file_name = uploaded_file.name
 
-        # حفظ البيانات في جلسة النظام لتسهيل التعديل المباشر
-        if 'main_df' not in st.session_state:
-            st.session_state.main_df = df_prep.copy()
-
-        df_work = st.session_state.main_df
+        df_work = st.session_state.df_main
+        branch_cols = st.session_state.branch_cols
 
         # DASHBOARD
         st.markdown("<div class='dashboard-header'><span class='led-dot led-blue'></span> DASHBOARD</div>", unsafe_allow_html=True)
         
         total_items = len(df_work)
-        shortage_mask = df_work['diff'] < 0
-        shortage_count = shortage_mask.sum()
+        shortage_count = (df_work['diff'] < 0).sum()
 
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -227,59 +201,67 @@ if uploaded_file is not None:
 
         st.markdown("---")
 
-        # قسم التعديل وتسويه العجز
-        st.markdown("<div class='dashboard-header'><span class='led-dot led-red'></span> إدارة الأكواد التي بها عجز (القيم السالبه فقط)</div>", unsafe_allow_html=True)
+        # إدارة العجز والبحث
+        st.markdown("<div class='dashboard-header'><span class='led-dot led-red'></span> إدارة الأكواد التي بها عجز</div>", unsafe_allow_html=True)
 
-        # استخراج أكواد العجز فقط
-        df_shortage = df_work[df_work['diff'] < 0].copy()
-
-        col_opt1, col_opt2 = st.columns([2, 2])
-        with col_opt1:
-            if st.button("⚡ تسوية العجز أوتوماتيكياً (توزيع الخصم بالتساوي على الفروع)"):
-                for idx in df_shortage.index:
+        col_search, col_btn = st.columns([3, 2])
+        with col_search:
+            search_query = st.text_input("🔍 البحث برقم الكود (Item أو Item-Size):", "").strip()
+        with col_btn:
+            st.write(" ")
+            st.write(" ")
+            if st.button("⚡ تسوية العجز أوتوماتيكياً لجميع الفروع"):
+                shortage_indices = df_work[df_work['diff'] < 0].index
+                for idx in shortage_indices:
                     row = df_work.loc[idx]
                     updated_row = auto_rebalance_row(row, branch_cols, row['stock'])
                     df_work.loc[idx] = updated_row
                 
-                # إعادة حساب الكميات والفروقات
                 df_work['qty'] = df_work[branch_cols].sum(axis=1)
                 df_work['diff'] = df_work['stock'] - df_work['qty']
-                st.session_state.main_df = df_work
-                st.success("تمت تسوية العجز بنجاح وتوزيع الخصم على الفروع!")
+                st.session_state.df_main = df_work
+                st.success("تمت التسويه الأوتوماتيكية بنجاح!")
                 st.rerun()
 
-        with col_opt2:
-            if st.button("🔄 إعادة ضبط البيانات الأصلية"):
-                st.session_state.main_df = df_prep.copy()
-                st.rerun()
+        # تصفية جدول العجز + تطبيق البحث إن وجد
+        df_shortage = df_work[df_work['diff'] < 0].copy()
 
-        # جدول التعديل المباشر المخصص لأكواد العجز
+        if search_query:
+            df_shortage = df_shortage[
+                df_shortage['Item-Size'].str.contains(search_query, case=False, na=False) | 
+                df_shortage['Item'].str.contains(search_query, case=False, na=False)
+            ]
+
         display_cols = ['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff'] + branch_cols + ['دفعة اولى']
+
+        st.write("👇 **قم بتعديل الكميات مباشرة داخل الجدول وتسمع المعادلة لحظياً:**")
         
-        st.write("يمكنك تعديل كميات الفروع يدوياً مباشرة في الجدول أسفله لتسويه العجز:")
-        edited_shortage = st.data_editor(
+        # عرض الجدول القابل للتعديل
+        edited_df = st.data_editor(
             df_shortage[display_cols],
-            key="shortage_editor",
+            key="editor_shortage",
             use_container_width=True,
-            height=350,
+            height=380,
             disabled=['Item-Size', 'Item', 'Size', 'stock', 'qty', 'diff']
         )
 
-        # حفظ التعديلات اليدوية
-        if st.button("💾 حفظ التعديلات اليدوية"):
-            for idx in edited_shortage.index:
-                for b in branch_cols + ['دفعة اولى']:
-                    df_work.loc[idx, b] = edited_shortage.loc[idx, b]
-            
-            df_work['qty'] = df_work[branch_cols].sum(axis=1)
-            df_work['diff'] = df_work['stock'] - df_work['qty']
-            st.session_state.main_df = df_work
-            st.success("تم حفظ التعديلات اليدوية واحتساب الفروقات الجديدة!")
+        # التحديث اللحظي المباشر لمجموع القطع والفرق بمجرد تغيير القيم
+        has_changed = False
+        for idx in edited_df.index:
+            for b in branch_cols + ['دفعة اولى']:
+                if st.session_state.df_main.loc[idx, b] != edited_df.loc[idx, b]:
+                    st.session_state.df_main.loc[idx, b] = edited_df.loc[idx, b]
+                    has_changed = True
+
+        if has_changed:
+            # إعادة حساب المجموع والفرق تلقائياً
+            st.session_state.df_main['qty'] = st.session_state.df_main[branch_cols].sum(axis=1)
+            st.session_state.df_main['diff'] = st.session_state.df_main['stock'] - st.session_state.df_main['qty']
             st.rerun()
 
         st.markdown("---")
 
-        # تصدير التقرير النهائي وتقرير العجز كملفات Excel مع حفظ المعادلات
+        # تصدير الملفات وإضافة معادلات Excel الحقيقية
         st.markdown("<div class='dashboard-header'><span class='led-dot led-green'></span> تصدير الملفات النهائية والمعادلات</div>", unsafe_allow_html=True)
 
         def make_excel_with_formulas(df_to_export):
@@ -289,7 +271,6 @@ if uploaded_file is not None:
                 workbook = writer.book
                 worksheet = writer.sheets['Reallocation_Plan']
 
-                # كتابة المعادلات لصفحة الإكسيل
                 qty_col_letter = openpyxl.utils.get_column_letter(df_to_export.columns.get_loc('qty') + 1)
                 stock_col_letter = openpyxl.utils.get_column_letter(df_to_export.columns.get_loc('stock') + 1)
                 diff_col_letter = openpyxl.utils.get_column_letter(df_to_export.columns.get_loc('diff') + 1)
@@ -297,27 +278,26 @@ if uploaded_file is not None:
                 first_b_letter = openpyxl.utils.get_column_letter(df_to_export.columns.get_loc(branch_cols[0]) + 1)
                 last_b_letter = openpyxl.utils.get_column_letter(df_to_export.columns.get_loc(branch_cols[-1]) + 1)
 
+                # كتابة معادلة SUM و الفرق في كل صف داخل الإكسيل
                 for row_idx in range(2, len(df_to_export) + 2):
                     worksheet[f'{qty_col_letter}{row_idx}'] = f"=SUM({first_b_letter}{row_idx}:{last_b_letter}{row_idx})"
                     worksheet[f'{diff_col_letter}{row_idx}'] = f"={stock_col_letter}{row_idx}-{qty_col_letter}{row_idx}"
 
             return output.getvalue()
 
-        import openpyxl
-
         c_exp1, c_exp2 = st.columns(2)
         with c_exp1:
             st.download_button(
-                label="📥 تحميل كشف أصناف العجز فقط (Excel والمعادلات)",
-                data=make_excel_with_formulas(df_work[df_work['diff'] < 0][display_cols]),
+                label="📥 تحميل كشف أصناف العجز فقط (Excel مع المعادلات)",
+                data=make_excel_with_formulas(st.session_state.df_main[st.session_state.df_main['diff'] < 0][display_cols]),
                 file_name="كشف_العجز_فقط.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
         with c_exp2:
             st.download_button(
-                label="📥 تحميل كشف التحضير النهائي الكامل (Excel والمعادلات)",
-                data=make_excel_with_formulas(df_work[display_cols]),
+                label="📥 تحميل كشف التحضير النهائي الكامل (Excel مع المعادلات)",
+                data=make_excel_with_formulas(st.session_state.df_main[display_cols]),
                 file_name="الخطه_النهائيه_بعد_التسويه.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
